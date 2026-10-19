@@ -41,6 +41,12 @@ MUTACOES = [
     (S / "ps.py", "except subprocess.TimeoutExpired:", "except ZeroDivisionError:"),
     (S / "ps.py", "except OSError as erro:", "except ZeroDivisionError as erro:"),
     (S / "ps.py", 'texto = envoltorio.replace("__SCRIPT__", script)', 'texto = envoltorio % script'),
+    (S / "config.py", "if k in nomes", "if True"),
+    (S / "verificar.py", "falhas += 0 if resultado.success else 1", "falhas += 0"),
+    (S / "verificar.py", "return 1 if (falhas or carregou) else 0", "return 0"),
+    (S / "verificar.py", 'carregou = "posthog" in sys.modules or', "carregou = False or"),
+    (S / "verificar.py", ' or "openjarvis.analytics.client" in sys.modules', ""),
+    (S / "comando.py", "veredito = avaliar(comando)", 'veredito = avaliar("Get-Date")'),
 ]
 
 
