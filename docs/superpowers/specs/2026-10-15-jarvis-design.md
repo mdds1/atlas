@@ -8,6 +8,11 @@ Um assistente instalado no PC Windows do Matheus (WORK-DINIZ) que, **somente qua
 ele chamar**, verifica o computador, diagnostica problemas, pesquisa na internet e propõe
 soluções. Lê sozinho; qualquer mudança no PC só acontece com confirmação explícita.
 
+Escopo em camadas (Matheus, 19/10/2026): a primeira versão **só resolve problemas do PC**.
+Depois entram outros pedidos, como relatórios, planejamentos e organização da agenda. A
+primeira versão não os implementa, mas a estrutura deixa o caminho aberto (ver
+"Extensões futuras").
+
 ## Decisões já tomadas
 
 | Tema | Decisão |
@@ -107,6 +112,30 @@ sem aparecer na prévia do que vai para o Claude.
 | 4 | Memória: perfil do PC "quando está normal" e histórico de problemas e consertos | Arquivo local legível e apagável pelo Matheus |
 
 O Matheus testa no PC ao fim de cada fase antes da seguinte.
+
+## Extensões futuras (fora das Fases 1 a 4)
+
+Princípio: **cada área é um pacote de ferramentas separado**, registrado no OpenJarvis do
+mesmo jeito que o de diagnóstico, com o seu próprio perfil de permissão. Na Fase 1 existe
+só o pacote `pc`. Os outros entram depois, sem mexer no núcleo.
+
+| Pacote | O que faria | Cuidado próprio |
+|---|---|---|
+| `pc` (Fase 1) | Diagnóstico, leitura do PC, ações com OK | Já descrito acima |
+| `documentos` | Rascunhar relatórios e planejamentos, gerar `.docx` e planilhas | Texto longo é onde o modelo local é mais fraco; o roteador tende a mandar para o Claude |
+| `agenda` | Ler e organizar compromissos, propor horários | Criar, mover ou apagar evento é mudança e exige OK, como no PC |
+
+Regras que valem para todos os pacotes:
+- Permissão **por pacote**: ler sozinha, alterar só com OK.
+- A memória (Fase 4) é compartilhada, mas guarda cada assunto separado.
+- **Privacidade antes de nuvem**: relatórios e agenda podem ter nomes de alunos e dados
+  pessoais. Nada disso vai para o Claude sem a prévia e sem a limpeza de segredos, e o
+  padrão é resolver localmente.
+- Cada pacote novo ganha o seu próprio conjunto de cenários de teste antes de ser ligado.
+
+Pontos em aberto, só necessários quando o pacote for desenhado: qual agenda o Matheus usa
+(Google, iCloud ou outra) e onde ficam os relatórios e planejamentos (existe
+`~/docs/PLANEJAMENTOS` na bancada).
 
 ## Confiança e controle
 
