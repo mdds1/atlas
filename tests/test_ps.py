@@ -39,6 +39,15 @@ class TestExecutar(unittest.TestCase):
         self.assertEqual(r.codigo, -1)
         self.assertIn("não encontrado", r.erro)
 
+    def test_executavel_sem_permissao_nao_levanta_erro(self):
+        with tempfile.TemporaryDirectory() as pasta:
+            sem_permissao = os.path.join(pasta, "ps-sem-permissao")
+            with open(sem_permissao, "w") as f:
+                f.write("#!/bin/sh\necho ok\n")
+            r = executar_powershell("x", exe=sem_permissao)
+        self.assertEqual(r.codigo, -1)
+        self.assertIn("não foi possível executar", r.erro)
+
     def test_tempo_esgotado_nao_levanta_erro(self):
         with tempfile.TemporaryDirectory() as pasta:
             falso = os.path.join(pasta, "ps-falso")

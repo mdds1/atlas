@@ -49,6 +49,8 @@ def executar_powershell(script, *, timeout=30, json=True, exe="powershell"):
         return ResultadoPS(-1, "", f"tempo esgotado ({timeout}s)")
     except FileNotFoundError:
         return ResultadoPS(-1, "", f"{exe} não encontrado")
+    except OSError as erro:
+        return ResultadoPS(-1, "", f"não foi possível executar {exe}: {erro}")
     return ResultadoPS(
         p.returncode,
         p.stdout.decode("utf-8", "replace"),
