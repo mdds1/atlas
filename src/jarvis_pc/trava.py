@@ -20,7 +20,7 @@ class Veredito:
 
 
 _APAGAR = r"\b(?:remove-item|ri|rm|del|erase|rd|rmdir)\b"
-_RECURSIVO = r"(?:^|\s)(?:-r|-rf|-fr|-rec[a-z]*)(?=[\s:]|$)|(?:^|\s)/s(?=[\s/]|$)"
+_RECURSIVO = r"(?:^|\s)(?:-r|-rf|-fr|-rec[a-z]*)(?=[\s:]|$)|(?:^|\s|/|(?<=/[a-z])|(?<=\brd)|(?<=\bdel)|(?<=\brmdir)|(?<=\berase))/s(?=[\s/:]|$)"
 _SISTEMA = (
     r"c:\\windows|system32|syswow64|program files|programdata|%windir%|"
     r"%systemroot%|\$env:windir|\$env:systemroot"

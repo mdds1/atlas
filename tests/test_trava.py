@@ -180,6 +180,13 @@ BLOQUEADOS = [
     ("ren HKCU:\\Software\\X", "registro"),
     ("reg copy a b", "registro"),
     ("foo -EncodedCommand SQBFAFgA", "execucao_dinamica"),
+    ("rd /q/s C:\\x", "apagar_recursivo"),
+    ("rd/s C:\\x", "apagar_recursivo"),
+    ("rd/s/q C:\\x", "apagar_recursivo"),
+    ("rmdir/s C:\\x", "apagar_recursivo"),
+    ("del/s C:\\x", "apagar_recursivo"),
+    ("erase/s/q C:\\x", "apagar_recursivo"),
+    ("cmd /c rd /q/s C:\\x", "apagar_recursivo"),
     # elevacao
     ("runas /user:Administrador cmd", "elevacao"),
 ]
@@ -199,6 +206,9 @@ PERMITIDOS = [
     "Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion -Name ProgramFilesDir",
     "Start-Process notepad",
     "Get-Content C:\\Users\\Diniz\\log.txt -Tail 20",
+    "rd C:\\x",
+    "Get-ChildItem C:\\temp\\arquivos/subpasta",
+    "dir C:\\a /w",
     "& \"C:\\Program Files\\App\\app.exe\" -x",
     "& 'C:\\Tools\\a.exe'",
     "Get-Content a.txt -Encoding UTF8",
