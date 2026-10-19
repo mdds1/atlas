@@ -8,6 +8,21 @@ from jarvis_pc.ps import executar_powershell
 from jarvis_pc.trava import avaliar
 
 
+def montar_texto_confirmacao(pendente, texto_padrao):
+    """Texto de OK em português, com o comando literal (sem barras dobradas)."""
+    comando = pendente.get("comando")
+    if not isinstance(comando, str) or not comando.strip():
+        return texto_padrao
+    motivo = str(pendente.get("motivo") or "") or "nao informado"
+    return (
+        "A Jarvis quer executar este comando no seu PC:\n\n"
+        + comando
+        + "\n\nMotivo: "
+        + motivo
+        + "\n\nPermitir?"
+    )
+
+
 def criar_agente(
     *, modelo, confirmar, registro, executor=executar_powershell, engine=None, host=None, max_turns=8
 ):
@@ -16,20 +31,29 @@ def criar_agente(
         raise ValueError("confirmar é obrigatório: sem ele a Jarvis não executa nada")
     ferramentas = criar_ferramentas_leitura(executor) + [ComandoPcTool(executor)]
     conhecidas = {f.spec.name for f in ferramentas}
+    pendente = {}
 
     def antes(nome, argumentos):
         permitido = nome in conhecidas
         if permitido and nome == "pc_comando":
             permitido = avaliar(argumentos.get("comando")).permitido
+        if permitido and nome == "pc_comando":
+            pendente.clear()
+            pendente.update(comando=argumentos.get("comando"), motivo=argumentos.get("motivo"))
+        if not permitido:
+            pendente.clear()
         registro.evento("chamada", ferramenta=nome, argumentos=argumentos, permitido=permitido)
         return permitido
 
     def pedir(texto):
+        texto_mostrado = montar_texto_confirmacao(pendente, texto)
         try:
-            resposta = bool(confirmar(texto))
+            resposta = bool(confirmar(texto_mostrado))
         except Exception:
             resposta = False
-        registro.evento("confirmacao", pedido=texto, resposta=resposta)
+        finally:
+            pendente.clear()
+        registro.evento("confirmacao", pedido=texto_mostrado, resposta=resposta)
         return resposta
 
     if engine is None:

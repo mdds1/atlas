@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from jarvis_pc.agente import criar_agente, perguntar
+from jarvis_pc.agente import criar_agente, montar_texto_confirmacao, perguntar
 from jarvis_pc.registro import Registro
 
 from tests.ajuda import ExecutorFalso, MotorFalso, chamada, final, fixture
@@ -82,6 +82,55 @@ class TestComando(unittest.TestCase):
         self.assertEqual(executor.chamadas, [])
         self.assertIs(registro.eventos[1]["permitido"], False)
         self.assertEqual(registro.eventos[1]["ferramenta"], "shell_exec")
+
+
+class TestTextoConfirmacao(unittest.TestCase):
+    CAB = "A Jarvis quer executar este comando no seu PC:\n\n"
+
+    def test_contrato_com_barra_unica(self):
+        cmd = "Remove-Item C:\\Users\\Diniz\\Temp\\a.log"
+        texto = montar_texto_confirmacao({"comando": cmd, "motivo": "limpar log"}, "padrao")
+        self.assertEqual(texto, self.CAB + cmd + "\n\nMotivo: limpar log\n\nPermitir?")
+        self.assertIn("C:\\Users\\Diniz", texto)
+        self.assertNotIn("C:\\\\Users", texto)
+        self.assertNotIn("Allow execution", texto)
+
+    def test_casos_sem_comando_valido_devolvem_o_padrao(self):
+        for pendente in ({}, {"comando": 5}, {"comando": "  "}, {"comando": ""}):
+            with self.subTest(pendente=pendente):
+                self.assertEqual(montar_texto_confirmacao(pendente, "padrao"), "padrao")
+
+    def test_motivo_ausente(self):
+        texto = montar_texto_confirmacao({"comando": "Get-Date"}, "padrao")
+        self.assertIn("Motivo: nao informado", texto)
+
+    def test_agente_mostra_comando_literal_e_registra_o_mesmo_texto(self):
+        recebidos = []
+        cmd = "Remove-Item C:\\Users\\Diniz\\Temp\\a.log"
+        agente, registro, _ = montar(
+            [chamada("pc_comando", comando=cmd, motivo="limpar log"), final("fim")],
+            lambda t: recebidos.append(t) or True,
+        )
+        perguntar(agente, registro, "limpa")
+        esperado = "A Jarvis quer executar este comando no seu PC:\n\n" + cmd + "\n\nMotivo: limpar log\n\nPermitir?"
+        self.assertEqual(recebidos, [esperado])
+        self.assertEqual(registro.eventos[2]["pedido"], esperado)
+
+    def test_segunda_confirmacao_nao_vaza_o_primeiro_comando(self):
+        recebidos = []
+        agente, registro, _ = montar(
+            [
+                chamada("pc_comando", comando="Get-Date", motivo="a"),
+                chamada("pc_comando", comando="Get-Host", motivo="b"),
+                final("fim"),
+            ],
+            lambda t: recebidos.append(t) or True,
+        )
+        perguntar(agente, registro, "duas")
+        self.assertEqual(len(recebidos), 2)
+        self.assertIn("Get-Date", recebidos[0])
+        self.assertIn("Get-Host", recebidos[1])
+        self.assertNotIn("Get-Date", recebidos[1])
 
 
 class TestSequencial(unittest.TestCase):
