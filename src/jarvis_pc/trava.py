@@ -20,13 +20,16 @@ class Veredito:
 
 
 _APAGAR = r"\b(?:remove-item|ri|rm|del|erase|rd|rmdir)\b"
-_RECURSIVO = r"(?:^|\s)(?:-r|-rf|-fr|-rec[a-z]*)(?=\s|$)|(?:^|\s)/s(?=\s|$)"
+_RECURSIVO = r"(?:^|\s)(?:-r|-rf|-fr|-rec[a-z]*)(?=[\s:]|$)|(?:^|\s)/s(?=[\s/]|$)"
 _SISTEMA = (
     r"c:\\windows|system32|syswow64|program files|programdata|%windir%|"
     r"%systemroot%|\$env:windir|\$env:systemroot"
 )
 _HIVE = r"\bhk(?:lm|cu|cr|u|cc)\b|\bhkey_[a-z_]+\b"
-_ESCRITA_REGISTRO = r"\b(?:set|new|remove|rename|copy|move|clear)-item(?:property)?\b"
+_ESCRITA_REGISTRO = (
+    r"\b(?:set|new|remove|rename|clear)-item(?:property)?\b|"
+    r"\b(?:sp|si|ni|rp|rni|rnp|cpi|cp|cpp|mi|mv|mp|cli|clp|ri|rm|del|erase|copy|move|ren)\b"
+)
 
 # Cada regra: nome, motivo mostrado ao Matheus, e uma função texto -> bool.
 _REGRAS = [
@@ -34,7 +37,7 @@ _REGRAS = [
         "formatar_disco",
         "formatar, particionar ou apagar disco",
         lambda t: re.search(
-            r"\bformat-volume\b|\bformat\s+[a-z]:|\bdiskpart\b|\bclear-disk\b|"
+            r"\bformat-volume\b|\bformat(?:\.com|\.exe)?\s+[a-z]:|\bdiskpart\b|\bclear-disk\b|"
             r"\bremove-partition\b|\binitialize-disk\b|\bset-disk\b|"
             r"\bnew-partition\b|\bresize-partition\b|\bset-partition\b",
             t,
@@ -79,11 +82,12 @@ _REGRAS = [
         "baixar ou executar código montado na hora",
         lambda t: re.search(
             r"\b(?:invoke-expression|iex)\b|downloadstring|downloadfile|downloaddata|"
-            r"frombase64string|(?:^|\s)-e(?:nc(?:odedcommand)?)?(?=\s)|\badd-type\b|"
+            r"frombase64string|(?:^|\s)-e(?:c|nc(?:odedcommand)?)?(?=\s|$)|"
+            r"\b(?:powershell|pwsh)(?:\.exe)?\b[^|;\n]*\s-en[a-z]*(?=\s|$)|\badd-type\b|"
             r"\[scriptblock\]|reflection\.assembly|\binvoke-webrequest\b|\biwr\b|"
             r"\binvoke-restmethod\b|\birm\b|\bstart-bitstransfer\b|\bcurl\b|\bwget\b|"
             r"\bbitsadmin\b|\bcertutil\b|\bmshta\b|\brundll32\b|\bregsvr32\b|"
-            r"(?:^|[\s;|])&\s*[(\$\"']|(?:^|[\s;|])\.\s*[(\$\"']",
+            r"(?:^|[\s;|])&(?!\s*([\"'])[a-z]:\\[^\"'$()+;|&]*\1(?!\s*\+))\s*[(\$\"']|(?:^|[\s;|])\.\s*[(\$\"']",
             t,
         ),
     ),
@@ -117,6 +121,7 @@ _REGRAS = [
 
 def _normalizar(comando):
     texto = unicodedata.normalize("NFKC", comando)
+    texto = re.sub("[\u2013\u2014\u2015]", "-", texto)
     texto = texto.replace("`", "").replace("^", "")
     texto = re.sub(r"\s+", " ", texto)
     return texto.lower()
