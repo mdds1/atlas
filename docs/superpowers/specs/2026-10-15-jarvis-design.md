@@ -1,6 +1,6 @@
 # Jarvis do PC: design
 
-Data: 15/10/2026. Estado: proposto, aguardando revisão do Matheus.
+Data: 15/10/2026, revisado em 19/10/2026. Estado: proposto, aguardando revisão do Matheus.
 
 ## Objetivo
 
@@ -15,15 +15,18 @@ soluções. Lê sozinho; qualquer mudança no PC só acontece com confirmação 
 | Base | OpenJarvis (Stanford, Apache-2.0), com a versão travada num commit validado |
 | Cérebro | Híbrido: Gemma local (Ollama) no dia a dia, Claude pela API no diagnóstico difícil |
 | Entrada | Texto e voz desde o início |
-| Voz | Segurar um atalho para falar (push-to-talk). Sem ativação por palma ou palavra, sem escuta contínua |
+| Voz | **Palavra de ativação, desde o início** (decisão de 19/10/2026), detectada localmente. Uma tecla de reserva para falar fica como alternativa. Sem ativação por palma |
 | Permissão | Lê sozinha; altera só com OK; apagar, formatar e afins bloqueados por código |
 | Onde roda | Só no PC Windows (Ryzen 7 5700X, 32 GB, RTX 3060 de 12 GB, Python 3.10.11) |
 | Repositório | `~/projetos/jarvis`, git local, sem GitHub |
 | Instalação no PC | Autorizada pelo Matheus em 15/10/2026, restrita à pasta `C:\Jarvis` e ao Ollama |
 
 Fora de escopo: ativação por palma, agentes proativos (resumo matinal e similares), acesso
-remoto por Telegram, câmera, qualquer ação sem OK, e o assunto de jogos (descartado pelo
-Matheus em 15/10/2026).
+remoto por Telegram, câmera e qualquer ação sem OK.
+
+O caso de uso de **jogos** foi descartado em 15/10/2026 e **voltou ao escopo em 19/10/2026**,
+como o exemplo central: um erro aparece no meio do jogo, o Matheus ativa a Jarvis por voz e
+pede para checar, trazer uma resolução ou resolver.
 
 ## Alternativas descartadas
 
@@ -53,6 +56,38 @@ Nosso, em pacote separado que se registra com `@ToolRegistry.register`:
 4. **Janela e atalho**: janela de texto aberta por atalho de teclado; callback de
    confirmação com Sim e Não.
 
+## Voz e palavra de ativação
+
+O OpenJarvis **não traz** detecção de palavra de ativação (verificado em 19/10/2026); traz
+gravação do microfone com detecção de silêncio, aproveitada depois que a palavra é ouvida.
+A palavra de ativação é peça nossa.
+
+- Detecção **local e offline**. Nada é gravado, guardado ou enviado antes de a palavra ser
+  reconhecida.
+- Indicação visível de que está escutando, e uma forma rápida de silenciar (ícone na
+  bandeja e comando de voz).
+- Tecla de reserva para falar, para quando a palavra falhar com o som do jogo alto.
+- Risco assumido: no estudo anterior a confiabilidade da ativação por palavra foi estimada
+  em ~50%. Medir com o som de um jogo real ligado, antes de dar a fase por pronta.
+
+## Modo jogo
+
+A RTX 3060 tem 12 GB de memória de vídeo e o jogo ocupa boa parte. Carregar o modelo local
+(~9,6 GB) na placa durante o jogo tiraria memória do jogo e poderia travá-lo.
+
+- Ao detectar um jogo aberto, a Jarvis roda um modelo menor **no processador** (32 GB de
+  RAM livres) e sobe para o Claude no diagnóstico difícil, em vez de usar a placa.
+- Fora do jogo, usa a Gemma na placa normalmente.
+- A medição de memória e velocidade desse modo é tarefa da Fase 1, antes de prometer o
+  comportamento.
+
+## Ler o erro que aparece na tela
+
+Erro de jogo costuma ser uma janela, não uma linha de log. A Jarvis captura a tela, extrai o
+texto **localmente** (o Windows traz leitor de texto embutido, a confirmar na Fase 1) e
+cruza com o log de eventos e os relatórios de falha do Windows. Imagem da tela não sai do PC
+sem aparecer na prévia do que vai para o Claude.
+
 ## Fluxo de "o PC está lento"
 
 1. Matheus chama pelo atalho (texto) ou segura outro atalho e fala.
@@ -68,7 +103,7 @@ Nosso, em pacote separado que se registra com `@ToolRegistry.register`:
 |---|---|---|
 | 1 | Texto, ferramentas de leitura, trava, janela com atalho, só Gemma local | Ollama, modelo Gemma, `C:\Jarvis` com ambiente Python próprio |
 | 2 | Roteador com Claude, prévia e limpeza de segredos | Nada novo; chave de API própria, separada da assinatura, com limite mensal |
-| 3 | Voz por push-to-talk, resposta falada em português | Whisper `small`, voz Kokoro `pf_dora` |
+| 3 | Palavra de ativação local, voz com tecla de reserva, resposta falada em português, modo jogo e leitura da tela | Whisper `small`, voz Kokoro `pf_dora`, detector de palavra de ativação |
 | 4 | Memória: perfil do PC "quando está normal" e histórico de problemas e consertos | Arquivo local legível e apagável pelo Matheus |
 
 O Matheus testa no PC ao fim de cada fase antes da seguinte.
@@ -99,8 +134,10 @@ O Matheus testa no PC ao fim de cada fase antes da seguinte.
 
 ## Riscos e pontos em aberto
 
-- A RTX 3060 de 12 GB comporta o modelo de ~9,6 GB mais Whisper e voz com folga pequena.
-  A Fase 3 precisa medir isso antes de prometer.
+- A RTX 3060 de 12 GB comporta o modelo de ~9,6 GB mais Whisper e voz com folga pequena, e
+  com um jogo aberto não comporta. O modo jogo precisa ser medido (Fase 1) e a voz também
+  (Fase 3) antes de prometer.
+- Palavra de ativação com som de jogo e chat de voz pode errar para os dois lados.
 - Probabilidades do estudo anterior: instalar e conversar por texto ~90%; voz em
   português ~75%; utilidade no dia a dia depende das ferramentas, e é por isso que elas
   são o centro do desenho.
