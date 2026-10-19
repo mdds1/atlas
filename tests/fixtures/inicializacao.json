@@ -1,0 +1,114 @@
+{
+  "itens": [
+    {
+      "nome": "GoogleDriveFS",
+      "comando": "\"C:\\Program Files\\Google\\Drive File Stream\\132.0.0.0\\GoogleDriveFS.exe\" --startup_mode",
+      "local": "HKU\\S-1-5-18\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    },
+    {
+      "nome": "OneDriveSetup",
+      "comando": "C:\\Windows\\System32\\OneDriveSetup.exe /thfirstsetup",
+      "local": "HKU\\S-1-5-19\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    },
+    {
+      "nome": "GoogleDriveFS",
+      "comando": "\"C:\\Program Files\\Google\\Drive File Stream\\132.0.0.0\\GoogleDriveFS.exe\" --startup_mode",
+      "local": "HKU\\S-1-5-19\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    },
+    {
+      "nome": "OneDriveSetup",
+      "comando": "C:\\Windows\\System32\\OneDriveSetup.exe /thfirstsetup",
+      "local": "HKU\\S-1-5-20\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    },
+    {
+      "nome": "GoogleDriveFS",
+      "comando": "\"C:\\Program Files\\Google\\Drive File Stream\\132.0.0.0\\GoogleDriveFS.exe\" --startup_mode",
+      "local": "HKU\\S-1-5-20\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    },
+    {
+      "nome": "SetTimerResolution",
+      "comando": "SetTimerResolution.lnk",
+      "local": "Startup"
+    },
+    {
+      "nome": "Steam",
+      "comando": "\"C:\\Program Files (x86)\\Steam\\steam.exe\" -silent",
+      "local": "HKU\\S-1-5-21-4144833-4202394178-409786975-1000\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    },
+    {
+      "nome": "RiotClient",
+      "comando": "C:\\Riot Games\\Riot Client\\RiotClientServices.exe --launch-background-mode",
+      "local": "HKU\\S-1-5-21-4144833-4202394178-409786975-1000\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    },
+    {
+      "nome": "Discord",
+      "comando": "\"C:\\Users\\Diniz\\AppData\\Local\\Discord\\Update.exe\" --processStart Discord.exe",
+      "local": "HKU\\S-1-5-21-4144833-4202394178-409786975-1000\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    },
+    {
+      "nome": "LGHUB",
+      "comando": "\"C:\\Program Files\\LGHUB\\system_tray\\lghub_system_tray.exe\" --minimized",
+      "local": "HKU\\S-1-5-21-4144833-4202394178-409786975-1000\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    },
+    {
+      "nome": "EpicGamesLauncher",
+      "comando": "\"C:\\Program Files\\Epic Games\\Launcher\\Portal\\Binaries\\Win64\\EpicGamesLauncher.exe\" -silent -launchcontext=boot",
+      "local": "HKU\\S-1-5-21-4144833-4202394178-409786975-1000\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    },
+    {
+      "nome": "EADM",
+      "comando": "\"C:\\Program Files\\Electronic Arts\\EA Desktop\\EA Desktop\\EALauncher.exe\" -silent",
+      "local": "HKU\\S-1-5-21-4144833-4202394178-409786975-1000\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    },
+    {
+      "nome": "vibranceGUI",
+      "comando": "\"C:\\Users\\Diniz\\Desktop\\vibranceGUI.exe\" -minimized",
+      "local": "HKU\\S-1-5-21-4144833-4202394178-409786975-1000\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    },
+    {
+      "nome": "GoogleDriveFS",
+      "comando": "\"C:\\Program Files\\Google\\Drive File Stream\\132.0.0.0\\GoogleDriveFS.exe\" --startup_mode",
+      "local": "HKU\\S-1-5-21-4144833-4202394178-409786975-1000\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    },
+    {
+      "nome": "Overwolf",
+      "comando": "C:\\Program Files (x86)\\Overwolf\\OverwolfLauncher.exe -overwolfsilent",
+      "local": "HKU\\S-1-5-21-4144833-4202394178-409786975-1000\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    },
+    {
+      "nome": "Claude",
+      "comando": "\"C:\\Users\\Diniz\\AppData\\Local\\AnthropicClaude\\claude.exe\" --startup",
+      "local": "HKU\\S-1-5-21-4144833-4202394178-409786975-1000\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    },
+    {
+      "nome": "Proton VPN",
+      "comando": "C:\\Program Files\\Proton\\VPN\\ProtonVPN.Launcher.exe \"----ms-protocol:ms-encodedlaunch:App?ContractId=Windows.StartupTask&TaskId=Proton%20VPN\"",
+      "local": "HKU\\S-1-5-21-4144833-4202394178-409786975-1000\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    },
+    {
+      "nome": "GoogleChromeAutoLaunch_63ED1D5334A1971967ACF62C647B0B76",
+      "comando": "\"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\" --no-startup-window /prefetch:5",
+      "local": "HKU\\S-1-5-21-4144833-4202394178-409786975-1000\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    },
+    {
+      "nome": "GoogleDriveFS",
+      "comando": "\"C:\\Program Files\\Google\\Drive File Stream\\132.0.0.0\\GoogleDriveFS.exe\" --startup_mode",
+      "local": "HKU\\.DEFAULT\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    },
+    {
+      "nome": "Tailscale",
+      "comando": "C:\\PROGRA~1\\TAILSC~1\\TAILSC~1.EXE ",
+      "local": "Common Startup"
+    },
+    {
+      "nome": "SecurityHealth",
+      "comando": "%windir%\\system32\\SecurityHealthSystray.exe",
+      "local": "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    },
+    {
+      "nome": "Riot Vanguard",
+      "comando": "\"C:\\Program Files\\Riot Vanguard\\vgtray.exe\"",
+      "local": "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    }
+  ]
+}

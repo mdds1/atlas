@@ -1,0 +1,34 @@
+{
+  "eventos": [
+    {
+      "quando": "2026-10-19T10:29:59",
+      "fonte": "Microsoft-Windows-TPM-WMI",
+      "id": 1040,
+      "mensagem": "As verificações de integridade de pré-atestado confirmam que um componente crítico falhou e o dispositivo não deve ser aprovado no atestado.\r\n Consulte C:\\WINDOWS\\Logs\\MeasuredBoot\\0000000437-00000000"
+    },
+    {
+      "quando": "2026-10-18T23:59:04",
+      "fonte": "Service Control Manager",
+      "id": 7000,
+      "mensagem": "Não foi possível iniciar o serviço OpenSSH SSH Server devido ao seguinte erro: \r\nO serviço não respondeu à requisição de início ou controle em tempo hábil."
+    },
+    {
+      "quando": "2026-10-18T23:58:59",
+      "fonte": "Service Control Manager",
+      "id": 7031,
+      "mensagem": "O serviço OpenSSH SSH Server foi finalizado inesperadamente. Isto aconteceu 1 vez(es). A seguinte ação corretiva será tomada em 5000 milissegundos: Reiniciar o serviço."
+    },
+    {
+      "quando": "2026-10-18T18:33:39",
+      "fonte": "Microsoft-Windows-DNS-Client",
+      "id": 1012,
+      "mensagem": "Ocorreu um erro ao tentar ler o arquivo de hosts locais."
+    },
+    {
+      "quando": "2026-10-18T18:29:21",
+      "fonte": "Microsoft-Windows-TPM-WMI",
+      "id": 1040,
+      "mensagem": "As verificações de integridade de pré-atestado confirmam que um componente crítico falhou e o dispositivo não deve ser aprovado no atestado.\r\n Consulte C:\\WINDOWS\\Logs\\MeasuredBoot\\0000000436-00000000"
+    }
+  ]
+}

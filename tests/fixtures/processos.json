@@ -1,0 +1,64 @@
+{
+  "processos": [
+    {
+      "nome": "chrome",
+      "pid": 17796,
+      "ram_mb": 578,
+      "cpu_s": 667.4
+    },
+    {
+      "nome": "Code",
+      "pid": 13444,
+      "ram_mb": 547,
+      "cpu_s": 161.9
+    },
+    {
+      "nome": "claude",
+      "pid": 21340,
+      "ram_mb": 526,
+      "cpu_s": 13.8
+    },
+    {
+      "nome": "Memory Compression",
+      "pid": 2784,
+      "ram_mb": 514,
+      "cpu_s": 15.6
+    },
+    {
+      "nome": "Discord",
+      "pid": 15064,
+      "ram_mb": 508,
+      "cpu_s": 504.3
+    },
+    {
+      "nome": "chrome",
+      "pid": 25444,
+      "ram_mb": 500,
+      "cpu_s": 45.8
+    },
+    {
+      "nome": "MsMpEng",
+      "pid": 4928,
+      "ram_mb": 471,
+      "cpu_s": 402.1
+    },
+    {
+      "nome": "chrome",
+      "pid": 20900,
+      "ram_mb": 460,
+      "cpu_s": 79.1
+    },
+    {
+      "nome": "steamwebhelper",
+      "pid": 18316,
+      "ram_mb": 444,
+      "cpu_s": 29.5
+    },
+    {
+      "nome": "chrome",
+      "pid": 23784,
+      "ram_mb": 403,
+      "cpu_s": 71.1
+    }
+  ]
+}

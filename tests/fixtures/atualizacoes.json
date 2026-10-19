@@ -1,0 +1,24 @@
+{
+  "pendentes": [
+    {
+      "titulo": "Ferramenta de Remoção de Software Mal-intencionado do Windows x64 - v5.146 (KB890830)",
+      "critica": false
+    },
+    {
+      "titulo": "Atualização de inteligência de segurança para Microsoft Defender Antivirus - KB2267602 (versão 1.461.109.0) - Canal atual (amplo)",
+      "critica": false
+    },
+    {
+      "titulo": "MediaTek Inc. - Ports - 3.0.1511.0",
+      "critica": false
+    },
+    {
+      "titulo": "2026-10 .NET Framework Atualização de Segurança (KB5127694)",
+      "critica": false
+    },
+    {
+      "titulo": "2026-10 Atualização de Segurança (KB5127648) (26300.9711)",
+      "critica": false
+    }
+  ]
+}

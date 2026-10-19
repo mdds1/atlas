@@ -1,0 +1,10 @@
+{
+  "gpu": {
+    "nome": "NVIDIA GeForce RTX 3060",
+    "temperatura_c": 52,
+    "uso_percent": 9,
+    "vram_usada_mb": 2063,
+    "vram_total_mb": 12288
+  },
+  "cpu_temperatura_c": null
+}

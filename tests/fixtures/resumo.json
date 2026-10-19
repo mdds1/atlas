@@ -1,0 +1,18 @@
+{
+  "cpu_percent": 7,
+  "ram_total_gb": 31.9,
+  "ram_livre_gb": 18.8,
+  "ligado_desde": "2026-10-19T10:29:41",
+  "discos": [
+    {
+      "unidade": "C:",
+      "total_gb": 930.5,
+      "livre_gb": 319.2
+    },
+    {
+      "unidade": "E:",
+      "total_gb": 447.1,
+      "livre_gb": 105.6
+    }
+  ]
+}

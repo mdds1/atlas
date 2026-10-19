@@ -1,0 +1,34 @@
+{
+  "servicos": [
+    {
+      "nome": "edgeupdate",
+      "exibicao": "Microsoft Edge Update Service (edgeupdate)",
+      "estado": "Stopped",
+      "codigo_saida": 0
+    },
+    {
+      "nome": "GoogleUpdaterInternalService157.0.8089.0",
+      "exibicao": "Google Updater Internal Service (GoogleUpdaterInternalService157.0.8089.0)",
+      "estado": "Stopped",
+      "codigo_saida": 0
+    },
+    {
+      "nome": "GoogleUpdaterService157.0.8089.0",
+      "exibicao": "Google Updater Service (GoogleUpdaterService157.0.8089.0)",
+      "estado": "Stopped",
+      "codigo_saida": 0
+    },
+    {
+      "nome": "MapsBroker",
+      "exibicao": "Gerenciador de Mapas Baixados",
+      "estado": "Stopped",
+      "codigo_saida": 0
+    },
+    {
+      "nome": "sppsvc",
+      "exibicao": "Proteção de Software",
+      "estado": "Stopped",
+      "codigo_saida": 0
+    }
+  ]
+}
