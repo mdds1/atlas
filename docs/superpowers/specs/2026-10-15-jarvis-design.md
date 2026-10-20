@@ -166,6 +166,11 @@ Pontos em aberto, só necessários quando o pacote for desenhado: qual agenda o 
 - A RTX 3060 de 12 GB comporta o modelo de ~9,6 GB mais Whisper e voz com folga pequena, e
   com um jogo aberto não comporta. O modo jogo precisa ser medido (Fase 1) e a voz também
   (Fase 3) antes de prometer.
+- Medido em 20/10/2026 (`docs/medicoes-fase-1.md`): o 12b carregado ocupa 10,3 de 12 GB e
+  descarrega sozinho após 5 min; no modo processador o e4b faz 23,6 tokens/s sem usar a
+  GPU. Cenários: 12b 24 de 24, e4b 20 de 24. Continua sem medir: o modo jogo com um jogo
+  de verdade aberto (disputa de processador), Whisper e voz na memória de vídeo, e o OCR
+  em telas de jogo.
 - Palavra de ativação com som de jogo e chat de voz pode errar para os dois lados.
 - Probabilidades do estudo anterior: instalar e conversar por texto ~90%; voz em
   português ~75%; utilidade no dia a dia depende das ferramentas, e é por isso que elas

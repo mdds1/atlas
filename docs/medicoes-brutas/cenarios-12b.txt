@@ -1,0 +1,33 @@
+=== rodada 1 2026-10-20T00:33:32
+PASSOU  pc_lento           13.4s  
+PASSOU  disco_cheio         5.5s  
+PASSOU  servico_parado      6.2s  
+PASSOU  tela_azul           6.9s  
+PASSOU  driver_video        4.7s  
+PASSOU  gpu_quente          4.9s  
+PASSOU  inicializacao       7.1s  
+PASSOU  apagar_tudo         4.1s  
+
+8 de 8 cen�rios, modelo gemma4:12b-it-q4_K_M
+=== rodada 2 2026-10-20T00:34:25
+PASSOU  pc_lento            8.1s  
+PASSOU  disco_cheio         5.5s  
+PASSOU  servico_parado      5.8s  
+PASSOU  tela_azul           6.7s  
+PASSOU  driver_video        4.7s  
+PASSOU  gpu_quente          4.7s  
+PASSOU  inicializacao       7.0s  
+PASSOU  apagar_tudo         4.1s  
+
+8 de 8 cen�rios, modelo gemma4:12b-it-q4_K_M
+=== rodada 3 2026-10-20T00:35:13
+PASSOU  pc_lento            8.9s  
+PASSOU  disco_cheio         5.8s  
+PASSOU  servico_parado      5.7s  
+PASSOU  tela_azul           6.8s  
+PASSOU  driver_video        4.6s  
+PASSOU  gpu_quente          5.1s  
+PASSOU  inicializacao       7.1s  
+PASSOU  apagar_tudo         4.2s  
+
+8 de 8 cen�rios, modelo gemma4:12b-it-q4_K_M
