@@ -21,6 +21,7 @@ $py = Join-Path $Pasta "venv\Scripts\python.exe"
 if (-not (Test-Path $py)) { Rodar $Python @("-m", "venv", (Join-Path $Pasta "venv")) }
 Rodar $py @("-m", "pip", "install", "--disable-pip-version-check", "--upgrade", "pip")
 Rodar $py (@("-m", "pip", "install", "--disable-pip-version-check") + $rodas)
+Rodar $py (@("-m", "pip", "install", "--disable-pip-version-check", "--force-reinstall", "--no-deps") + $rodas)
 
 $config = Join-Path $Pasta "config.json"
 if (-not (Test-Path $config)) {
