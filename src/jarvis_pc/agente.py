@@ -1,4 +1,6 @@
 """Monta o agente: ferramentas de leitura, comando travado e confirmação."""
+import unicodedata
+
 from openjarvis.agents.orchestrator import OrchestratorAgent
 
 from jarvis_pc.comando import ComandoPcTool
@@ -13,7 +15,12 @@ def montar_texto_confirmacao(pendente, texto_padrao):
     comando = pendente.get("comando")
     if not isinstance(comando, str) or not comando.strip():
         return texto_padrao
-    motivo = str(pendente.get("motivo") or "") or "nao informado"
+    motivo = str(pendente.get("motivo") or "")
+    motivo = "".join(" " if unicodedata.category(c) in ("Cc", "Cf") else c for c in motivo)
+    motivo = " ".join(motivo.split())
+    if len(motivo) > 300:
+        motivo = motivo[:300] + "..."
+    motivo = motivo or "nao informado"
     return (
         "A Jarvis quer executar este comando no seu PC:\n\n"
         + comando

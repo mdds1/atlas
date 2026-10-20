@@ -189,6 +189,15 @@ BLOQUEADOS = [
     ("cmd /c rd /q/s C:\\x", "apagar_recursivo"),
     # elevacao
     ("runas /user:Administrador cmd", "elevacao"),
+    # caractere_de_controle
+    ("Get-Date\u202e", "caractere_de_controle"),
+    ("Get-Date\u200b", "caractere_de_controle"),
+    ("Get-Date\ufeff", "caractere_de_controle"),
+    ("Get-Date\nStop-Computer -Force", "caractere_de_controle"),
+    ("Get-Date\r", "caractere_de_controle"),
+    ("a\x00b", "caractere_de_controle"),
+    ("Get-Date\x1b[0m", "caractere_de_controle"),
+    ("Get-Date" + "\n" * 40 + "Stop-Computer -Force", "caractere_de_controle"),
 ]
 
 PERMITIDOS = [
@@ -213,6 +222,7 @@ PERMITIDOS = [
     "& 'C:\\Tools\\a.exe'",
     "Get-Content a.txt -Encoding UTF8",
     "Out-File x.txt -Encoding utf8",
+    "Get-Process |\tSort-Object CPU",
 ]
 
 

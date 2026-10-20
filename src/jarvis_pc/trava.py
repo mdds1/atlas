@@ -133,6 +133,10 @@ def avaliar(comando):
         return Veredito(False, "vazio", "comando vazio")
     if len(comando) > LIMITE_TAMANHO:
         return Veredito(False, "tamanho", f"comando maior que {LIMITE_TAMANHO} caracteres")
+    for caractere in comando:
+        categoria = unicodedata.category(caractere)
+        if categoria == "Cf" or (categoria == "Cc" and caractere != "\t"):
+            return Veredito(False, "caractere_de_controle", "caractere de controle ou invisivel no comando")
     normal = _normalizar(comando)
     sem_aspas = normal.replace('"', "").replace("'", "")
     for nome, motivo, bate in _REGRAS:

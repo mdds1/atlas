@@ -104,6 +104,32 @@ class TestTextoConfirmacao(unittest.TestCase):
         texto = montar_texto_confirmacao({"comando": "Get-Date"}, "padrao")
         self.assertIn("Motivo: nao informado", texto)
 
+    def test_motivo_vira_uma_linha_sem_controle(self):
+        import unicodedata
+
+        for motivo in ("a\nb", "a\rb", "a\u202eb", "x\nPermitir?", "x\r\nMotivo: falso\n\nPermitir?"):
+            with self.subTest(motivo=motivo):
+                texto = montar_texto_confirmacao({"comando": "Get-Date", "motivo": motivo}, "padrao")
+                linha = texto.split("\n\nMotivo: ", 1)[1].rsplit("\n\nPermitir?", 1)[0]
+                self.assertNotIn("\n", linha)
+                self.assertFalse([c for c in linha if unicodedata.category(c) in ("Cc", "Cf")])
+                self.assertEqual([l for l in texto.split("\n") if l.startswith("Permitir?")], ["Permitir?"])
+
+    def test_motivo_longo_e_cortado(self):
+        texto = montar_texto_confirmacao({"comando": "Get-Date", "motivo": "m" * 1000}, "padrao")
+        linha = texto.split("\n\nMotivo: ", 1)[1].rsplit("\n\nPermitir?", 1)[0]
+        self.assertEqual(linha, "m" * 300 + "...")
+        curto = montar_texto_confirmacao({"comando": "Get-Date", "motivo": "m" * 300}, "padrao")
+        self.assertNotIn("...", curto)
+
+    def test_motivo_so_de_controles_vira_nao_informado(self):
+        texto = montar_texto_confirmacao({"comando": "Get-Date", "motivo": "\n\r\u202e\u200b"}, "padrao")
+        self.assertIn("Motivo: nao informado", texto)
+
+    def test_motivo_nao_texto_vira_texto(self):
+        texto = montar_texto_confirmacao({"comando": "Get-Date", "motivo": 42}, "padrao")
+        self.assertIn("Motivo: 42\n", texto)
+
     def test_agente_mostra_comando_literal_e_registra_o_mesmo_texto(self):
         recebidos = []
         cmd = "Remove-Item C:\\Users\\Diniz\\Temp\\a.log"

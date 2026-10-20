@@ -47,6 +47,10 @@ MUTACOES = [
     (S / "verificar.py", 'carregou = "posthog" in sys.modules or', "carregou = False or"),
     (S / "verificar.py", ' or "openjarvis.analytics.client" in sys.modules', ""),
     (S / "comando.py", "veredito = avaliar(comando)", 'veredito = avaliar("Get-Date")'),
+    (S / "trava.py", 'if categoria == "Cf" or (categoria == "Cc" and caractere != "\\t"):', 'if categoria == "Cc" and caractere != "\\t":'),
+    (S / "trava.py", 'if categoria == "Cf" or (categoria == "Cc" and caractere != "\\t"):', 'if categoria == "Cf" or categoria == "Cc":'),
+    (S / "agente.py", "if len(motivo) > 300:", "if len(motivo) > 3000:"),
+    (S / "agente.py", 'motivo = " ".join(motivo.split())', "motivo = motivo"),
 ]
 
 
