@@ -54,6 +54,21 @@ Comandos de teste usados em todo o plano, a partir de `~/projetos/jarvis`:
 ```
 
 ---
+
+## Registro da execução (19/10/2026)
+
+As Tarefas 1 a 8 foram executadas por subagentes, cada uma com revisão de spec e qualidade, mais uma revisão geral do ramo. O código do repositório é a fonte da verdade; os trechos embutidos abaixo ficaram **defasados** nestes pontos, de propósito:
+
+- **Trava (`trava.py`, `test_trava.py`)**: ganhou rodadas de correção aprovadas pelo Matheus (contornos de `-Recurse:$true`, travessão, `rd /s/q`, `-ec`, apelidos de registro, `format.com`; `&` com caminho literal entre aspas liberado; depois pipe, `-Re`, splat, e recusa de caracteres de controle e invisíveis).
+- **Agente**: Tarefa 5b (texto de confirmação em português com o comando literal e o motivo saneado em uma linha, no máximo 300 caracteres).
+- **`ps.py`**: também absorve `OSError`. **`ponte.py`**: `Pedido.expirado`. **`config.py`**: valida tipos e a tecla. **`__main__.py`**: erro de partida vira `erro-de-partida.txt` e `messagebox`, e o `Janela` é importado dentro de `main`. **`cenarios.py`**: `proibe_alterar`.
+- **Instalador/desinstalador**: o instalador reinstala as rodas com `--force-reinstall --no-deps`; o desinstalador recusa raiz de disco, pastas protegidas, links e qualquer pasta cujo `iniciar.bat` não chame `jarvis_pc`, e só encerra processos dentro de `<pasta>\`.
+- **Contagens finais**: 106 testes; `tools/mutacoes_trava.py` 135 palavras e 0 escaparam; `tools/mutacoes.py` 44 sabotagens e 0 com problema. Os números citados nas Tarefas 1 a 8 (5, 23, 44, 61, 80 testes; 105 e 28) valiam no momento em que o plano foi escrito.
+- **Pendências registradas** (decididas na revisão final): recusar também U+2028 e U+2029 se a aceitação mostrar que o diálogo do Windows quebra linha com eles; proteger o registro do evento `fim` com `try/except`; menores adiados na triagem da revisão final.
+
+Tarefas 9 a 11 (PC) seguem abaixo, já corrigidas.
+
+---
 ### Task 1: Repositório, ambiente e versão travada do OpenJarvis
 
 **Files:**
@@ -3132,7 +3147,7 @@ Esta é a primeira tarefa que escreve no PC. A autorização do Matheus (15/10/2
 .venv/bin/python scripts/pc.py cmd 'Get-PSDrive C | Select-Object Used,Free | Format-List; (Get-Command ollama -ErrorAction SilentlyContinue).Source; Test-Path C:\Jarvis'
 ```
 
-Expected: espaço livre no C: acima de 30 GB, nenhuma linha de caminho do `ollama`, e `False` para `C:\Jarvis`. Se `C:\Jarvis` já existir, **pare** e pergunte ao Matheus.
+Expected: espaço livre no C: acima de 30 GB, nenhuma linha de caminho do `ollama`, e `False` para `C:\Jarvis`. Confira também que o Python que o instalador usa existe: `.venv/bin/python scripts/pc.py cmd 'Test-Path "$env:LOCALAPPDATA\Programs\Python\Python310\python.exe"'` deve dar `True`. Se `C:\Jarvis` já existir, **pare** e pergunte ao Matheus.
 
 - [ ] **Step 2: Instalar o Ollama**
 
@@ -3272,7 +3287,7 @@ Expected (medido em 19/10/2026): `lido` quase igual a `esperado`, com a troca de
 - [ ] **Step 6: Escrever os números e decidir**
 
 Crie `docs/medicoes-fase-1.md` com uma tabela por medição (data, comando, resultado bruto) e três decisões escritas:
-1. **Modelo padrão da Fase 1:** o que passou mais cenários sem `não leu`, desempatando por velocidade. Se for diferente de `gemma4:12b-it-q4_K_M`, troque o padrão em `src/jarvis_pc/config.py`, em `windows/instalar.ps1` e no teste correspondente, e rode a suíte.
+1. **Modelo padrão da Fase 1:** o que passou mais cenários sem `não leu`, desempatando por velocidade. Se for diferente de `gemma4:12b-it-q4_K_M`, troque o padrão em `src/jarvis_pc/config.py`, em `windows/instalar.ps1` e no teste correspondente, rode a suíte, e **aplique no PC**: edite o `modelo` em `C:\Jarvis\config.json` (o instalador nunca sobrescreve esse arquivo e o PC já gravou o modelo antigo nele), ou gere rodas novas e rode o instalador de novo (ele agora usa `--force-reinstall`).
 2. **O modo jogo é viável?** Sim só se a memória de vídeo não subiu e a velocidade no processador for tolerável. Se não for, a spec precisa de um ajuste (por exemplo, "durante o jogo a Jarvis só usa o Claude") e o Matheus decide.
 3. **OCR:** usar como está, com conferência do código, ou adiar a leitura de tela e usar imagem no Claude.
 
@@ -3300,11 +3315,11 @@ Aqui quem decide é o Matheus. A janela e o atalho só podem ser conferidos numa
 
 - [ ] **Step 1: Testar a desinstalação numa pasta de teste, antes de depender dela**
 
-Cria uma pasta de teste com o marcador `iniciar.bat` e um arquivo qualquer, sem mexer em `C:\Jarvis`:
+Cria uma pasta de teste com o marcador `iniciar.bat` (que precisa chamar `jarvis_pc`, como o de verdade) e um arquivo qualquer, sem mexer em `C:\Jarvis`:
 
 ```bash
 scp windows/desinstalar.ps1 win:C:/Users/Diniz/envio/
-.venv/bin/python scripts/pc.py cmd 'New-Item -ItemType Directory -Force C:\Jarvis-teste | Out-Null; Set-Content C:\Jarvis-teste\iniciar.bat "@echo off"; Set-Content C:\Jarvis-teste\arquivo.txt "teste"; Test-Path C:\Jarvis-teste\iniciar.bat'
+.venv/bin/python scripts/pc.py cmd 'New-Item -ItemType Directory -Force C:\Jarvis-teste | Out-Null; Set-Content C:\Jarvis-teste\iniciar.bat "@echo off","pythonw -m jarvis_pc"; Set-Content C:\Jarvis-teste\arquivo.txt "teste"; Test-Path C:\Jarvis-teste\iniciar.bat'
 .venv/bin/python scripts/pc.py cmd 'powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\Diniz\envio\desinstalar.ps1 -Pasta C:\Users\Diniz\envio'
 .venv/bin/python scripts/pc.py cmd 'Test-Path C:\Users\Diniz\envio; Test-Path C:\Jarvis-teste'
 .venv/bin/python scripts/pc.py cmd 'powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\Diniz\envio\desinstalar.ps1 -Pasta C:\Jarvis-teste'
