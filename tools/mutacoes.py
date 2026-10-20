@@ -51,6 +51,11 @@ MUTACOES = [
     (S / "trava.py", 'if categoria == "Cf" or (categoria == "Cc" and caractere != "\\t"):', 'if categoria == "Cf" or categoria == "Cc":'),
     (S / "agente.py", "if len(motivo) > 300:", "if len(motivo) > 3000:"),
     (S / "agente.py", 'motivo = " ".join(motivo.split())', "motivo = motivo"),
+    (S / "config.py", "len(tecla) != 1 or ", ""),
+    (S / "config.py", "isinstance(tempo, bool) or ", ""),
+    (S / "config.py", "0 < tempo <= 3600", "0 < tempo"),
+    (S / "__main__.py", '        if registro is not None:\n            registro.evento("fim")', "        pass"),
+    (S / "__main__.py", 'arquivo.write_text(f"{time.strftime(\'%Y-%m-%d %H:%M:%S\')}\\n{detalhe}", encoding="utf-8")', "pass"),
 ]
 
 
