@@ -56,6 +56,9 @@ MUTACOES = [
     (S / "config.py", "0 < tempo <= 3600", "0 < tempo"),
     (S / "__main__.py", '        if registro is not None:\n            registro.evento("fim")', "        pass"),
     (S / "__main__.py", 'arquivo.write_text(f"{time.strftime(\'%Y-%m-%d %H:%M:%S\')}\\n{detalhe}", encoding="utf-8")', "pass"),
+    (S / "ponte.py", "        self.expirado = True\n", "        pass\n"),
+    (S / "cenarios.py", "if cenario.proibe_alterar and any(", "if False and any("),
+
 ]
 
 

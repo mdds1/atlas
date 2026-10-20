@@ -13,6 +13,7 @@ class Pedido:
         self.texto = texto
         self._evento = threading.Event()
         self._resposta = False
+        self.expirado = False
 
     def responder(self, sim):
         if not self._evento.is_set():
@@ -22,6 +23,7 @@ class Pedido:
     def esperar(self, tempo_limite):
         if self._evento.wait(tempo_limite):
             return self._resposta
+        self.expirado = True
         return False
 
 

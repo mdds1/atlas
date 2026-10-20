@@ -62,6 +62,23 @@ class TestPonte(unittest.TestCase):
         t.join(2)
         self.assertIs(saida["resposta"], False)
 
+    def test_expirado_e_falso_antes_e_verdadeiro_depois_do_prazo(self):
+        ponte = PonteConfirmacao(tempo_limite=0.05)
+        t, saida = perguntar_em_thread(ponte, "posso?")
+        pedido = esperar_pedido(ponte)
+        self.assertIs(pedido.expirado, False)
+        t.join(2)
+        self.assertIs(saida["resposta"], False)
+        self.assertIs(pedido.expirado, True)
+
+    def test_expirado_fica_falso_quando_respondido_a_tempo(self):
+        ponte = PonteConfirmacao(tempo_limite=5)
+        t, saida = perguntar_em_thread(ponte, "posso?")
+        pedido = esperar_pedido(ponte)
+        pedido.responder(True)
+        t.join(2)
+        self.assertIs(pedido.expirado, False)
+
     def test_fila_vazia_devolve_none(self):
         self.assertIsNone(PonteConfirmacao().proximo())
 

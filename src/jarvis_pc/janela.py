@@ -24,15 +24,19 @@ def registrar_atalho(tecla, ao_apertar):
     resultado = queue.Queue()
 
     def laco():
-        user32 = ctypes.windll.user32
-        ok = user32.RegisterHotKey(None, 1, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, ord(tecla.upper()))
-        resultado.put(bool(ok))
-        if not ok:
-            return
-        msg = wintypes.MSG()
-        while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) != 0:
-            if msg.message == WM_HOTKEY:
-                ao_apertar()
+        try:
+            user32 = ctypes.windll.user32
+            ok = user32.RegisterHotKey(None, 1, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, ord(tecla.upper()))
+            resultado.put(bool(ok))
+            if not ok:
+                return
+            msg = wintypes.MSG()
+            while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
+                if msg.message == WM_HOTKEY:
+                    ao_apertar()
+        except Exception:
+            if resultado.empty():
+                resultado.put(False)
 
     threading.Thread(target=laco, daemon=True).start()
     return resultado.get(timeout=5)
@@ -115,22 +119,32 @@ class Janela:
             self._eventos.put(("erro", f"{type(erro).__name__}: {erro}"))
 
     def _ciclo(self):
-        pedido = self.ponte.proximo()
-        if pedido is not None:
-            self.mostrar()
-            sim = messagebox.askyesno("A Jarvis pede permissão", pedido.texto, parent=self.raiz)
-            pedido.responder(sim)
         try:
-            while True:
-                tipo, dado = self._eventos.get_nowait()
-                if tipo == "mostrar":
+            pedido = self.ponte.proximo()
+            if pedido is not None:
+                if pedido.expirado:
+                    self._escrever("Uma confirmação expirou e foi tratada como Não.\n")
+                else:
                     self.mostrar()
-                elif tipo == "resposta":
-                    self._ocupado = False
-                    self._escrever(f"Jarvis: {dado}\n")
-                elif tipo == "erro":
-                    self._ocupado = False
-                    self._escrever(f"Jarvis: não consegui responder ({dado}). O Ollama está rodando?\n")
-        except queue.Empty:
-            pass
-        self.raiz.after(100, self._ciclo)
+                    sim = messagebox.askyesno("A Jarvis pede permissão", pedido.texto, parent=self.raiz)
+                    pedido.responder(sim)
+                    if pedido.expirado:
+                        self._escrever("Tempo esgotado: sua resposta chegou tarde e foi tratada como Não.\n")
+            try:
+                while True:
+                    tipo, dado = self._eventos.get_nowait()
+                    if tipo == "mostrar":
+                        self.mostrar()
+                    elif tipo == "resposta":
+                        self._ocupado = False
+                        self._escrever(f"Jarvis: {dado}\n")
+                    elif tipo == "erro":
+                        self._ocupado = False
+                        self._escrever(f"Jarvis: não consegui responder ({dado}). O Ollama está rodando?\n")
+            except queue.Empty:
+                pass
+        finally:
+            try:
+                self.raiz.after(100, self._ciclo)
+            except tk.TclError:
+                pass
