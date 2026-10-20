@@ -4,6 +4,7 @@
 Matheus ler o comando exato e dizer Sim. A trava existe para que o modelo, um
 erro dele ou um texto malicioso lido da web nunca consiga nem pedir certas
 coisas: o pedido perigoso não chega a aparecer na tela.
+Limite conhecido: ForEach-Object { Remove-Item ... } não é barrado.
 """
 import re
 import unicodedata
@@ -20,7 +21,7 @@ class Veredito:
 
 
 _APAGAR = r"\b(?:remove-item|ri|rm|del|erase|rd|rmdir)\b"
-_RECURSIVO = r"(?:^|\s)(?:-r|-rf|-fr|-rec[a-z]*)(?=[\s:]|$)|(?:^|\s|/|(?<=/[a-z])|(?<=\brd)|(?<=\bdel)|(?<=\brmdir)|(?<=\berase))/s(?=[\s/:]|$)"
+_RECURSIVO = r"(?:^|\s)(?:-r|-rf|-fr|-re[a-z]*)(?=[\s:]|$)|(?:^|\s|/|(?<=/[a-z])|(?<=\brd)|(?<=\bdel)|(?<=\brmdir)|(?<=\berase))/s(?=[\s/:]|$)"
 _SISTEMA = (
     r"c:\\windows|system32|syswow64|program files|programdata|%windir%|"
     r"%systemroot%|\$env:windir|\$env:systemroot"
@@ -46,7 +47,13 @@ _REGRAS = [
     (
         "apagar_recursivo",
         "apagar pasta inteira, de forma recursiva",
-        lambda t: re.search(_APAGAR, t) and re.search(_RECURSIVO, t),
+        lambda t: re.search(_APAGAR, t)
+        and (re.search(_RECURSIVO, t) or re.search(r"\brecurse\s*=", t)),
+    ),
+    (
+        "apagar_por_pipe",
+        "apagar o que vem de outro comando por pipe",
+        lambda t: re.search(r"\|\s*(?:remove-item|ri|rm|del|erase|rd|rmdir)\b", t),
     ),
     (
         "apagar_curinga",

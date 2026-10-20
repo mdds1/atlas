@@ -189,6 +189,18 @@ BLOQUEADOS = [
     ("cmd /c rd /q/s C:\\x", "apagar_recursivo"),
     # elevacao
     ("runas /user:Administrador cmd", "elevacao"),
+    # apagar_por_pipe
+    ("Get-ChildItem C:\\x | Remove-Item", "apagar_por_pipe"),
+    ("gci C:\\x | ri", "apagar_por_pipe"),
+    ("gci C:\\x | rm", "apagar_por_pipe"),
+    ("gci C:\\x | del", "apagar_por_pipe"),
+    ("gci C:\\x | erase", "apagar_por_pipe"),
+    ("gci C:\\x | rd", "apagar_por_pipe"),
+    ("gci C:\\x | rmdir", "apagar_por_pipe"),
+    # -Re e -Rec sao abreviacoes de -Recurse; splat de Recurse
+    ("Remove-Item C:\\x -Re", "apagar_recursivo"),
+    ("Remove-Item C:\\x -Rec", "apagar_recursivo"),
+    ("$p=@{Recurse=$true}; Remove-Item C:\\x @p", "apagar_recursivo"),
     # caractere_de_controle
     ("Get-Date\u202e", "caractere_de_controle"),
     ("Get-Date\u200b", "caractere_de_controle"),
@@ -223,6 +235,9 @@ PERMITIDOS = [
     "Get-Content a.txt -Encoding UTF8",
     "Out-File x.txt -Encoding utf8",
     "Get-Process |\tSort-Object CPU",
+    "Get-ChildItem C:\\x | Select-Object Name",
+    "Get-Process | Where-Object CPU -gt 10 | Sort-Object CPU",
+    "Remove-Item C:\\x\\a.log",
 ]
 
 
