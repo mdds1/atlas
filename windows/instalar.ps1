@@ -13,15 +13,15 @@ function Rodar($exe, $argumentos) {
 }
 
 if (-not (Test-Path $Python)) { throw "Python 3.10 nao encontrado em $Python" }
-$rodas = @(Get-ChildItem -Path $Rodas -Filter *.whl | ForEach-Object { $_.FullName })
-if ($rodas.Count -ne 2) { throw "esperava 2 rodas (OpenJarvis e jarvis_pc) em $Rodas, achei $($rodas.Count)" }
+$listaRodas = @(Get-ChildItem -Path $Rodas -Filter *.whl | ForEach-Object { $_.FullName })
+if ($listaRodas.Count -ne 2) { throw "esperava 2 rodas (OpenJarvis e jarvis_pc) em $Rodas, achei $($listaRodas.Count)" }
 
 New-Item -ItemType Directory -Force -Path $Pasta | Out-Null
 $py = Join-Path $Pasta "venv\Scripts\python.exe"
 if (-not (Test-Path $py)) { Rodar $Python @("-m", "venv", (Join-Path $Pasta "venv")) }
 Rodar $py @("-m", "pip", "install", "--disable-pip-version-check", "--upgrade", "pip")
-Rodar $py (@("-m", "pip", "install", "--disable-pip-version-check") + $rodas)
-Rodar $py (@("-m", "pip", "install", "--disable-pip-version-check", "--force-reinstall", "--no-deps") + $rodas)
+Rodar $py (@("-m", "pip", "install", "--disable-pip-version-check") + $listaRodas)
+Rodar $py (@("-m", "pip", "install", "--disable-pip-version-check", "--force-reinstall", "--no-deps") + $listaRodas)
 
 $config = Join-Path $Pasta "config.json"
 if (-not (Test-Path $config)) {
