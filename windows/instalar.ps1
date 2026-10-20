@@ -28,6 +28,10 @@ if (-not (Test-Path $config)) {
   Set-Content -Path $config -Value '{"modelo": "gemma4:12b-it-q4_K_M"}' -Encoding ASCII
 }
 $bat = Join-Path $Pasta "iniciar.bat"
-$linhas = @('@echo off', 'start "" "%~dp0venv\Scripts\pythonw.exe" -m jarvis_pc "%~dp0"')
+# Sobe o servidor do Ollama, escondido e na sessao de quem clicou, se ele nao estiver respondendo.
+$ollama = @'
+powershell -NoProfile -WindowStyle Hidden -Command "try { Invoke-WebRequest -UseBasicParsing http://localhost:11434/api/tags -TimeoutSec 2 | Out-Null } catch { Start-Process -WindowStyle Hidden -FilePath ($env:LOCALAPPDATA + '\Programs\Ollama\ollama.exe') -ArgumentList 'serve' }"
+'@
+$linhas = @('@echo off', $ollama, 'start "" "%~dp0venv\Scripts\pythonw.exe" -m jarvis_pc "%~dp0"')
 Set-Content -Path $bat -Value $linhas -Encoding ASCII
 Write-Output "Jarvis instalada em $Pasta. Para iniciar: $bat"

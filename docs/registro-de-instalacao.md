@@ -24,3 +24,5 @@ Data: 20/10/2026. PC do Matheus (RTX 3060 12 GB, Python 3.10.11).
    modo `rodar` (1200 s). O `pull` terminou mesmo assim, no lado do PC.
 4. Os acentos da saida do `verificar` aparecem quebrados no terminal do Linux
    (saida em codepage do Windows); nao afeta a Jarvis.
+5. O `iniciar.bat` passou a subir o `ollama serve` escondido, na sessao de quem
+   clicou, quando a porta 11434 nao responde. Assim nenhum terminal fica aberto.
