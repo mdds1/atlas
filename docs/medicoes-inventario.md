@@ -28,6 +28,18 @@ fotos em E: fora da FORWARD 0; E:\Fotos & Videos 0; AppData 0; .env, id_rsa, nom
 Tempos de 2,6 s a 7 s por cenario de inventario. Nao conferi ainda o numero das respostas de inv_maiores e inv_programa contra o banco (pendente).
 O cenario inv_foto_excluida pode estar certo ao recusar sem consultar; o julgador exige a chamada.
 
+## Comparacao de modelos (22/10/2026, mesmos 14 cenarios, contexto 16k)
+
+| Modelo | Cenarios | Na GPU | Falhas | Tempo tipico |
+|---|---|---|---|---|
+| gemma4:12b | 13 de 14 | 8 GB | inv_foto_excluida | 3 a 9 s (pc_lento 21 s) |
+| gemma4:e4b | 11 de 14 | 6,6 GB | inv_achar_arquivo, inv_servico, inv_foto_excluida | 3 a 7 s |
+| qwen3:14b | 12 de 14 | 87% (13% na CPU) | inv_pacote, inv_foto_excluida | 5 a 53 s |
+| gpt-oss:20b | 13 de 14 | 73% (27% na CPU) | inv_foto_excluida | 5 a 56 s |
+| qwen3.5:9b | 12 de 14 | 100% | inv_pacote, inv_foto_excluida | 4 a 22 s |
+
+inv_foto_excluida falha em todos: nenhum chama a ferramenta e recusa direto. Pode ser comportamento certo; o julgador e que exige a chamada.
+
 ## Aceitacao (Matheus)
 
 Pendente.
