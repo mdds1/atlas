@@ -1,4 +1,4 @@
-"""Janela de texto da Jarvis e atalho global de teclado (só Windows).
+"""Janela de texto da Atlas e atalho global de teclado (só Windows).
 
 Não tem teste automático: abrir janela e registrar atalho dependem de uma área de
 trabalho de verdade. A lógica que importa fica em outros módulos, testados.
@@ -8,7 +8,7 @@ e conversa com a janela por filas.
 import queue
 import threading
 import tkinter as tk
-from tkinter import messagebox
+from jarvis_pc.ponte import NAO, SIM, SIM_SEMPRE
 
 from jarvis_pc.agente import perguntar
 
@@ -42,6 +42,32 @@ def registrar_atalho(tecla, ao_apertar):
     return resultado.get(timeout=5)
 
 
+def perguntar_ok(raiz, texto, pode_sempre):
+    """Diálogo modal com Sim, Sim sempre (se permitido) e Não. Fechar é Não."""
+    escolha = {"r": NAO}
+    caixa = tk.Toplevel(raiz)
+    caixa.title("A Atlas pede permissão")
+    caixa.attributes("-topmost", True)
+    caixa.transient(raiz)
+    tk.Label(caixa, text=texto, justify="left", wraplength=560, font=("Segoe UI", 10)).pack(padx=12, pady=12)
+    linha = tk.Frame(caixa)
+    linha.pack(pady=(0, 12))
+
+    def escolher(r):
+        escolha["r"] = r
+        caixa.destroy()
+
+    tk.Button(linha, text="Sim", width=12, command=lambda: escolher(SIM)).pack(side="left", padx=4)
+    if pode_sempre:
+        tk.Button(linha, text="Sim sempre", width=12, command=lambda: escolher(SIM_SEMPRE)).pack(side="left", padx=4)
+    tk.Button(linha, text="Não", width=12, command=lambda: escolher(NAO)).pack(side="left", padx=4)
+    caixa.protocol("WM_DELETE_WINDOW", lambda: escolher(NAO))
+    caixa.bind("<Escape>", lambda _e: escolher(NAO))
+    caixa.grab_set()
+    raiz.wait_window(caixa)
+    return escolha["r"]
+
+
 class Janela:
     def __init__(self, agente, registro, ponte, tecla):
         self.agente = agente
@@ -52,7 +78,7 @@ class Janela:
         self._ocupado = False
 
         self.raiz = tk.Tk()
-        self.raiz.title("Jarvis")
+        self.raiz.title("Atlas")
         self.raiz.geometry("720x520")
         self.raiz.attributes("-topmost", True)
         self.raiz.protocol("WM_DELETE_WINDOW", self.esconder)
@@ -66,7 +92,7 @@ class Janela:
         self.entrada.pack(side="left", fill="x", expand=True)
         self.entrada.bind("<Return>", lambda _e: self.enviar())
         tk.Button(linha, text="Enviar", command=self.enviar).pack(side="left", padx=(6, 0))
-        tk.Button(linha, text="Encerrar Jarvis", command=self.encerrar).pack(side="left", padx=(6, 0))
+        tk.Button(linha, text="Encerrar Atlas", command=self.encerrar).pack(side="left", padx=(6, 0))
 
         self.raiz.withdraw()
         self.raiz.after(100, self._ciclo)
@@ -74,7 +100,7 @@ class Janela:
     # -- vida da janela ----------------------------------------------------
     def iniciar(self):
         if registrar_atalho(self._tecla, lambda: self._eventos.put(("mostrar", None))):
-            self._escrever(f"Jarvis pronta. Ctrl+Alt+{self._tecla.upper()} abre esta janela.\n")
+            self._escrever(f"Atlas pronta. Ctrl+Alt+{self._tecla.upper()} abre esta janela.\n")
         else:
             self._escrever(
                 f"Não consegui registrar Ctrl+Alt+{self._tecla.upper()} (outro programa usa). "
@@ -108,7 +134,7 @@ class Janela:
             return
         self.entrada.delete(0, "end")
         self._ocupado = True
-        self._escrever(f"\nVocê: {texto}\nJarvis: pensando...\n")
+        self._escrever(f"\nVocê: {texto}\nAtlas: pensando...\n")
         threading.Thread(target=self._rodar, args=(texto,), daemon=True).start()
 
     def _rodar(self, texto):
@@ -126,8 +152,7 @@ class Janela:
                     self._escrever("Uma confirmação expirou e foi tratada como Não.\n")
                 else:
                     self.mostrar()
-                    sim = messagebox.askyesno("A Jarvis pede permissão", pedido.texto, parent=self.raiz)
-                    pedido.responder(sim)
+                    pedido.responder(perguntar_ok(self.raiz, pedido.texto, pedido.pode_sempre))
                     if pedido.expirado:
                         self._escrever("Tempo esgotado: sua resposta chegou tarde e foi tratada como Não.\n")
             try:
@@ -137,10 +162,10 @@ class Janela:
                         self.mostrar()
                     elif tipo == "resposta":
                         self._ocupado = False
-                        self._escrever(f"Jarvis: {dado}\n")
+                        self._escrever(f"Atlas: {dado}\n")
                     elif tipo == "erro":
                         self._ocupado = False
-                        self._escrever(f"Jarvis: não consegui responder ({dado}). O Ollama está rodando?\n")
+                        self._escrever(f"Atlas: não consegui responder ({dado}). O Ollama está rodando?\n")
             except queue.Empty:
                 pass
         finally:
