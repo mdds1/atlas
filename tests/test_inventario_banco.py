@@ -146,6 +146,37 @@ class TestBanco(unittest.TestCase):
                     self.b.consultar(sql)
         self.assertEqual(self.b.consultar("SELECT nome FROM apps")[0]["nome"], "Git")
 
+    def test_consultar_recusa_escrita_via_cte(self):
+        v = self.b.iniciar_varredura("arquivos", 1.0)
+        self.b.gravar("arquivos", v, [arq("C:\\a.txt")])
+        for sql in ("WITH t AS (SELECT 1) DELETE FROM arquivos",
+                    "WITH t AS (SELECT 1) UPDATE arquivos SET nome = 'x'",
+                    "WITH t AS (SELECT 1) INSERT INTO arquivos (caminho, varredura) VALUES ('C:\\b', 1)"):
+            with self.subTest(sql=sql):
+                with self.assertRaises(ValueError):
+                    self.b.consultar(sql)
+        linhas = self.b.consultar("SELECT caminho, nome FROM arquivos")
+        self.assertEqual([(r["caminho"], r["nome"]) for r in linhas], [("C:\\a.txt", "a.txt")])
+
+    def test_consultar_aceita_ponto_e_virgula_em_literal_e_multilinha(self):
+        v = self.b.iniciar_varredura("arquivos", 1.0)
+        self.b.gravar("arquivos", v, [("C:\\a;b.txt", "a;b", ".txt", "C:\\", 1, 1.0)])
+        r = self.b.consultar("SELECT caminho\nFROM arquivos\nWHERE nome = 'a;b' -- ok; comentario\n")
+        self.assertEqual(len(r), 1)
+
+    def test_escrita_volta_a_funcionar_apos_consulta_recusada_ou_com_erro(self):
+        v = self.b.iniciar_varredura("arquivos", 1.0)
+        with self.assertRaises(ValueError):
+            self.b.consultar("WITH t AS (SELECT 1) DELETE FROM arquivos")
+        with self.assertRaises(Exception):
+            self.b.consultar("SELEC 1")
+        with self.assertRaises(Exception):
+            self.b.consultar("SELECT * FROM nao_existe")
+        self.b.progresso(v, 7)
+        self.b.gravar("arquivos", v, [arq("C:\\z.txt")])
+        self.assertEqual(self.b.em_andamento()[0]["itens"], 7)
+        self.assertEqual(self.b.consultar("SELECT COUNT(*) AS n FROM arquivos")[0]["n"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -122,9 +122,14 @@ class Banco:
             self._con.execute("UPDATE arquivos SET hash = ? WHERE caminho = ?", (valor, caminho))
 
     def consultar(self, sql, params=()):
-        texto = sql.strip()
-        primeiro = texto.split(None, 1)[0].upper() if texto else ""
-        if primeiro not in ("SELECT", "WITH") or ";" in texto.rstrip(";"):
-            raise ValueError("consultar aceita apenas SELECT")
         with self._trava:
-            return self._con.execute(texto, params).fetchall()
+            self._con.execute("PRAGMA query_only = ON")
+            try:
+                return self._con.execute(sql, params).fetchall()
+            except (sqlite3.OperationalError, sqlite3.ProgrammingError) as erro:
+                texto = str(erro).lower()
+                if "readonly" in texto or "one statement" in texto:
+                    raise ValueError("consultar aceita apenas SELECT") from erro
+                raise
+            finally:
+                self._con.execute("PRAGMA query_only = OFF")
