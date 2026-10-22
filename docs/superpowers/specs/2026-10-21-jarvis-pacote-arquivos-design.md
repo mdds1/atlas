@@ -34,8 +34,9 @@ O Matheus ampliou o pedido. Onde este texto diz o contrário, vale esta seção.
    nome), nem em `arq_ler`. Hoje isso atinge, além de `Fotos & Videos`, as fotos de
    `E:\Mãe\...` (fotos, Camera, WhatsApp Images), as imagens da Gincana em
    `E:\planejamentos\...\04 - Imagens e Dados` e as saídas do `E:\FOOOCUS`.
-   Premissa a confirmar: nas fontes de rede (drive, PC da Marcella) a mesma regra de
-   foto pessoal vale por padrão, e a Marcella decide o que mais fica de fora.
+   Nas fontes de rede (drive, PC da Marcella) a mesma regra de foto pessoal vale
+   (confirmado em 21/10/2026), e a Marcella decide o que mais fica de fora do PC dela.
+   `AppData`: entra **só o inventário de apps**, sem o conteúdo da pasta (confirmado).
 
 Ordem de construção: (1) inventário deste PC; (2) voz; (3) pesquisa na rede e na web;
 (4) construtor; (5) roteador com Claude, opcional.
@@ -171,7 +172,7 @@ indexação em segundo plano com a Jarvis fechada.
 
 ## Perguntas abertas
 
-1. Respondida em 21/10/2026: entra tudo, menos as fotos (ver Revisão, item 5). Falta
-   decidir se `AppData` entra; sugestão: só o inventário de apps, sem o conteúdo.
+1. Respondida em 21/10/2026: entra tudo, menos as fotos (ver Revisão, item 5), e
+   `AppData` só como inventário de apps, sem conteúdo.
 2. O modelo de embeddings exato é escolhido na medição da etapa 1a, entre os
    multilíngues de até 300 MB.
