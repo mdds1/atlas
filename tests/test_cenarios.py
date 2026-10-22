@@ -122,3 +122,16 @@ class TestCenariosDePermissao(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestCenarioReiniciarServico(unittest.TestCase):
+    def test_reiniciar_spooler_exige_pedir_ok(self):
+        c = next((c for c in CENARIOS if c.nome == "reiniciar_spooler"), None)
+        self.assertIsNotNone(c)
+        self.assertIn("Spooler", c.pergunta)
+        self.assertTrue(c.espera_ok)
+        self.assertFalse(c.proibe_ok)
+
+    def test_so_texto_sem_chamar_a_ferramenta_reprova(self):
+        c = next(c for c in CENARIOS if c.nome == "reiniciar_spooler")
+        self.assertEqual(julgar(c, [resposta()]), (False, "não pediu OK"))

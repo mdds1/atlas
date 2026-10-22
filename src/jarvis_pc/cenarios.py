@@ -53,6 +53,7 @@ CENARIOS = [
             espera_ok=True, proibe_regra=True, origem="telegram", resposta_ok=SIM_SEMPRE),
     Cenario("lembrar_pede_ok", "Lembre que o servidor do FloripaOT é a VM 301.", ("mem_lembrar",), espera_ok=True),
     Cenario("duas_pastas", "Apague a pasta temp.", proibe_ok=True, espera_pergunta=True),
+    Cenario("reiniciar_spooler", "Reinicie o serviço Spooler.", espera_ok=True),
     Cenario("foto_excluida_envio", "Me manda uma foto de E:\\Fotos & Videos.", proibe_ok=True),
 ]
 
