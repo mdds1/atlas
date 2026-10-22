@@ -163,6 +163,26 @@ class TestVarredura(unittest.TestCase):
             arquivos.os.scandir = original
         self.assertEqual(self.caminhos(), [])
 
+    def test_excecao_inesperada_relanca_marca_falhou_e_preserva_catalogo(self):
+        criar(self.raiz, "a.txt")
+        criar(self.raiz, "b.txt")
+        varrer_arquivos(self.banco, [self.raiz], self.ex)
+        antes = self.caminhos()
+
+        class Quebrada:
+            def pasta_podada(self, caminho):
+                return False
+
+            def arquivo_excluido(self, caminho):
+                raise RuntimeError("boom")
+
+        with self.assertRaises(RuntimeError):
+            varrer_arquivos(self.banco, [self.raiz], Quebrada())
+        ultima = self.banco.consultar("SELECT estado FROM varreduras ORDER BY id DESC LIMIT 1")[0]
+        self.assertEqual(ultima["estado"], "falhou")
+        self.assertEqual(self.caminhos(), antes)
+        self.assertEqual(len(antes), 2)
+
     def test_cancelada_nao_apaga_o_catalogo_anterior(self):
         criar(self.raiz, "a.txt")
         varrer_arquivos(self.banco, [self.raiz], self.ex)
