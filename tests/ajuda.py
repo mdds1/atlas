@@ -33,9 +33,13 @@ class MotorFalso(InferenceEngine):
     def __init__(self, roteiro):
         self.roteiro = list(roteiro)
         self.chamadas = 0
+        self.vistas = []
+        self.kwargs = []
 
     def generate(self, messages, *, model, temperature=0.7, max_tokens=1024, **kwargs):
         self.chamadas += 1
+        self.vistas.append(list(messages))
+        self.kwargs.append(kwargs)
         return self.roteiro.pop(0)
 
     async def stream(self, messages, *, model, temperature=0.7, max_tokens=1024, **kwargs):
