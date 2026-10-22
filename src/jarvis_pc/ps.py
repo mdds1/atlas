@@ -8,8 +8,10 @@ O stderr do PowerShell sai na página de código do Windows, não em UTF-8, por
 isso tudo é lido como bytes e decodificado tolerando erro.
 """
 import base64
+import re
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 
 ENVOLTORIO_JSON = r"""$ErrorActionPreference = 'SilentlyContinue'
@@ -22,6 +24,23 @@ ENVOLTORIO_TEXTO = r"""$ErrorActionPreference = 'Continue'
 $ProgressPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 __SCRIPT__"""
+
+
+def clixml_para_texto(texto):
+    """Converte o stderr em CLIXML do PowerShell em texto legível; o resto passa intacto."""
+    if not texto.lstrip().startswith("#< CLIXML"):
+        return texto
+    corpo = texto.split("\n", 1)[1] if "\n" in texto else ""
+    try:
+        raiz = ET.fromstring(corpo.strip())
+    except ET.ParseError:
+        return texto
+    linhas = []
+    for no in raiz.iter():
+        if no.tag.rpartition("}")[2] == "S" and no.get("S") == "Error":
+            bruto = re.sub(r"_x([0-9A-Fa-f]{4})_", lambda m: chr(int(m.group(1), 16)), no.text or "")
+            linhas.extend(l.strip() for l in bruto.splitlines() if l.strip())
+    return "\n".join(linhas)
 
 
 @dataclass(frozen=True)
@@ -54,5 +73,5 @@ def executar_powershell(script, *, timeout=30, json=True, exe="powershell"):
     return ResultadoPS(
         p.returncode,
         p.stdout.decode("utf-8", "replace"),
-        p.stderr.decode("utf-8", "replace"),
+        clixml_para_texto(p.stderr.decode("utf-8", "replace")),
     )

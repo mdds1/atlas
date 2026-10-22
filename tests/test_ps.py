@@ -4,7 +4,7 @@ import stat
 import tempfile
 import unittest
 
-from jarvis_pc.ps import executar_powershell, montar_argv
+from jarvis_pc.ps import clixml_para_texto, executar_powershell, montar_argv
 
 
 def decodificar(argv):
@@ -82,3 +82,38 @@ class TestExecutar(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+REAL = (
+    '#< CLIXML\r\n<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04">'
+    '<S S="Error">Restart-Service : O servico \'Spooler\' nao pode ser interrompido _x000D__x000A_</S>'
+    '<S S="Error">No linha:4 caractere:1_x000D__x000A_</S></Objs>'
+)
+
+
+class TestClixml(unittest.TestCase):
+    def test_exemplo_real_vira_texto_legivel(self):
+        self.assertEqual(
+            clixml_para_texto(REAL),
+            "Restart-Service : O servico 'Spooler' nao pode ser interrompido\nNo linha:4 caractere:1",
+        )
+
+    def test_texto_comum_passa_intacto(self):
+        self.assertEqual(clixml_para_texto("erro simples"), "erro simples")
+
+    def test_ignora_fluxos_que_nao_sao_erro(self):
+        xml = '#< CLIXML\n<Objs xmlns="x"><S S="progress">lixo</S><S S="Error">ruim_x000A_</S></Objs>'
+        self.assertEqual(clixml_para_texto(xml), "ruim")
+
+    def test_xml_quebrado_devolve_o_original(self):
+        self.assertEqual(clixml_para_texto("#< CLIXML\n<Objs"), "#< CLIXML\n<Objs")
+
+    def test_executar_converte_o_stderr(self):
+        with tempfile.TemporaryDirectory() as pasta:
+            falso = os.path.join(pasta, "ps-falso")
+            with open(falso, "w") as f:
+                f.write("#!/bin/sh\nprintf '%s' '" + REAL.replace("'", "'\\''") + "' >&2\nexit 1\n")
+            os.chmod(falso, os.stat(falso).st_mode | stat.S_IXUSR)
+            r = executar_powershell("x", exe=falso)
+        self.assertNotIn("CLIXML", r.erro)
+        self.assertIn("nao pode ser interrompido", r.erro)
