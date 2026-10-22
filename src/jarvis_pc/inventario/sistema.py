@@ -41,7 +41,7 @@ def coletar_sistema(banco, executor=executar_powershell, agora=time.time):
         resultado = executor(ler_script("inventario_sistema"), timeout=PRAZO, json=True)
     except Exception as erro:
         banco.encerrar_varredura(vid, "falhou", 1, agora())
-        return ResultadoColeta(False, f"falha ao executar o PowerShell: {type(erro).__name__}")
+        return ResultadoColeta(False, f"falha ao executar o PowerShell: {type(erro).__name__}: {erro}")
     if resultado.codigo != 0 or not resultado.saida.strip():
         motivo = (resultado.erro or "sem saída").strip()
         banco.encerrar_varredura(vid, "falhou", 1, agora())

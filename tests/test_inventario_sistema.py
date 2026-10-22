@@ -80,7 +80,7 @@ class TestColeta(unittest.TestCase):
 
         r = coletar_sistema(self.banco, executor=Quebra())
         self.assertFalse(r.ok)
-        self.assertEqual(r.motivo, "falha ao executar o PowerShell: RuntimeError")
+        self.assertEqual(r.motivo, "falha ao executar o PowerShell: RuntimeError: boom")
         self.assertEqual(self.estado_ultima(), "falhou")
         self.assertEqual(self.banco.em_andamento(), [])
 

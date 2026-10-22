@@ -25,7 +25,9 @@ class Atualizador:
         return self._ativa
 
     def cancelar(self):
-        self._cancelar = True
+        with self._trava:
+            if self._ativa:
+                self._cancelar = True
 
     def iniciar(self):
         with self._trava:
@@ -33,10 +35,15 @@ class Atualizador:
                 return False
             self._ativa = True
         self.ultimo_erro = ""
+        self._encerrar_pendentes()
         if self._sincrono:
             self._rodar()
         else:
-            threading.Thread(target=self._rodar, name="inventario", daemon=True).start()
+            try:
+                threading.Thread(target=self._rodar, name="inventario", daemon=True).start()
+            except BaseException:
+                self._ativa = False
+                raise
         return True
 
     def _rodar(self):
@@ -48,7 +55,8 @@ class Atualizador:
             coleta = coletar_sistema(self.banco, executor=self._executor, agora=self._agora)
             if not coleta.ok:
                 self.ultimo_erro = coleta.motivo
-            coletar_pacotes(self.banco, coleta.pythons, coleta.npm, agora=self._agora)
+            else:
+                coletar_pacotes(self.banco, coleta.pythons, coleta.npm, agora=self._agora)
         except Exception as erro:
             self.ultimo_erro = f"{type(erro).__name__}: {erro}"
         finally:
@@ -61,5 +69,6 @@ class Atualizador:
         try:
             for v in self.banco.em_andamento():
                 self.banco.encerrar_varredura(v["id"], "falhou", 1, self._agora())
-        except Exception:
-            pass
+        except Exception as erro:
+            if not self.ultimo_erro:
+                self.ultimo_erro = f"{type(erro).__name__}: {erro}"

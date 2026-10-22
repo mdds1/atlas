@@ -67,15 +67,14 @@ class TestAtualizador(unittest.TestCase):
         self.assertFalse(a.rodando())
         self.assertEqual(self.banco.ultima_varredura("arquivos")["estado"], "ok")
         self.assertEqual(self.estados("sistema"), ["falhou"])
-        self.assertEqual(self.estados("pacotes"), ["ok"])
+        self.assertEqual(self.estados("pacotes"), [])
         self.assertEqual(self.banco.em_andamento(), [])
 
-    def test_falha_do_powershell_vira_erro_legivel_e_ainda_coleta_pacotes(self):
+    def test_falha_do_powershell_vira_erro_legivel(self):
         self.ex = ExecutorFalso(saida="", codigo=1, erro="negado")
         a = self.montar(sincrono=True)
         a.iniciar()
         self.assertIn("negado", a.ultimo_erro)
-        self.assertEqual(self.estados("pacotes"), ["ok"])
         self.assertEqual(self.banco.em_andamento(), [])
 
     def test_falha_em_pacotes_registra_a_causa_e_libera(self):
@@ -103,13 +102,41 @@ class TestAtualizador(unittest.TestCase):
             [(["C:\\Users\\Diniz\\AppData\\Local\\Programs\\Python\\Python310\\"], "C:\\Users\\Diniz\\AppData\\Roaming\\npm\\node_modules")],
         )
 
-    def test_pacotes_recebe_listas_vazias_quando_o_sistema_falha(self):
+    def test_sistema_falho_nao_roda_pacotes_e_preserva_os_anteriores(self):
+        self.montar(sincrono=True).iniciar()
+        antes = self.banco.consultar("SELECT * FROM pacotes")
+        id_antes = self.banco.ultima_varredura("pacotes")["id"]
         self.ex = ExecutorFalso(saida="", codigo=1, erro="negado")
-        vistos = []
         a = self.montar(sincrono=True)
-        with mock.patch.object(modulo, "coletar_pacotes", lambda b, py, npm, agora=None: vistos.append((py, npm))):
+        a.iniciar()
+        self.assertIn("negado", a.ultimo_erro)
+        self.assertEqual(self.estados("pacotes"), ["ok"])
+        self.assertEqual(self.banco.ultima_varredura("pacotes")["id"], id_antes)
+        self.assertEqual(self.banco.consultar("SELECT * FROM pacotes"), antes)
+
+    def test_falha_ao_criar_a_thread_libera_e_relanca(self):
+        a = self.montar()
+        with mock.patch.object(modulo.threading, "Thread", side_effect=RuntimeError("sem threads")):
+            with self.assertRaises(RuntimeError):
+                a.iniciar()
+        self.assertFalse(a.rodando())
+        self.assertTrue(self.montar(sincrono=True).iniciar())
+
+    def test_iniciar_recupera_varredura_orfa(self):
+        self.banco.iniciar_varredura("pacotes", 1.0)
+        a = self.montar(sincrono=True)
+        vistos = []
+        with mock.patch.object(modulo, "varrer_arquivos", side_effect=lambda *x, **k: vistos.append(self.banco.em_andamento())):
             a.iniciar()
-        self.assertEqual(vistos, [([], "")])
+        self.assertEqual(vistos, [[]])
+        self.assertEqual(self.estados("pacotes")[0], "falhou")
+
+    def test_falha_ao_encerrar_pendentes_vai_para_ultimo_erro(self):
+        a = self.montar(sincrono=True)
+        with mock.patch.object(self.banco, "em_andamento", side_effect=OSError("banco")):
+            a.iniciar()
+        self.assertIn("OSError", a.ultimo_erro)
+        self.assertFalse(a.rodando())
 
     def test_nenhuma_varredura_fica_rodando_se_algo_escapa(self):
         def vaza(banco, pythons, npm, agora=None):
@@ -122,19 +149,25 @@ class TestAtualizador(unittest.TestCase):
         self.assertEqual(self.banco.em_andamento(), [])
         self.assertEqual(self.estados("pacotes"), ["falhou"])
 
-    def test_cancelar_interrompe_a_varredura_de_arquivos(self):
-        a = self.montar(sincrono=True)
-        a.cancelar()
+    def test_cancelar_durante_a_rodada_interrompe_a_varredura_de_arquivos(self):
+        chamado = []
+
+        def relogio():
+            if not chamado:
+                chamado.append(1)
+                a.cancelar()
+            return 1.0
+
+        a = self.montar(sincrono=True, agora=relogio)
         a.iniciar()
         self.assertIsNone(self.banco.ultima_varredura("arquivos"))
         self.assertEqual(self.estados("arquivos"), ["cancelada"])
 
-    def test_cancelar_so_vale_para_a_rodada_atual(self):
+    def test_cancelar_fora_de_rodada_nao_afeta_a_proxima(self):
         a = self.montar(sincrono=True)
         a.cancelar()
         a.iniciar()
-        a.iniciar()
-        self.assertIsNotNone(self.banco.ultima_varredura("arquivos"))
+        self.assertEqual(self.estados("arquivos"), ["ok"])
 
     def test_cancelamento_pendente_nao_vaza_se_a_varredura_levanta(self):
         a = self.montar(sincrono=True)
