@@ -92,6 +92,22 @@ class TestAgir(unittest.TestCase):
         self.assertEqual(eventos(registro, "regra_nova")[0]["regra"], "pc_comando: Restart-Service -Name Spooler")
         self.assertEqual(eventos(registro, "chamada")[1]["regra"], "pc_comando: Restart-Service -Name Spooler")
 
+    def test_sim_sempre_com_regra_recusada_avisa_o_matheus(self):
+        cmd = {"comando": "Restart-Service -Name Spo*", "motivo": "travado"}
+        agente, registro, executor, _ = montar([chamada("pc_comando", **cmd), final("Feito.")], responde(SIM_SEMPRE))
+        resposta = agente.perguntar("conserta")
+        self.assertEqual(len(executor.chamadas), 1)
+        self.assertIn("Executei só desta vez; a regra não foi gravada porque", resposta)
+        self.assertIn("curinga", resposta)
+        self.assertTrue(resposta.startswith("Feito."))
+
+    def test_aviso_de_regra_nao_vaza_para_a_pergunta_seguinte(self):
+        cmd = {"comando": "Restart-Service -Name Spo*", "motivo": "travado"}
+        roteiro = [chamada("pc_comando", **cmd), final("a"), final("b")]
+        agente, _, _, _ = montar(roteiro, responde(SIM_SEMPRE))
+        agente.perguntar("1")
+        self.assertEqual(agente.perguntar("2"), "b")
+
     def test_pelo_telegram_nao_oferece_e_nao_grava_regra(self):
         pedidos = []
         agente, _, executor, _ = montar([chamada("pc_comando", **CMD), final("x")], responde(SIM_SEMPRE, pedidos))

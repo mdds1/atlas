@@ -42,6 +42,7 @@ class Agente:
         self.confirmar, self.registro = confirmar, registro
         self.permissoes, self.memoria, self.sessao = permissoes, memoria, sessao
         self.max_passos = max_passos
+        self._avisos = []
 
     def _mensagens(self, texto):
         sistema = SYSTEM_PROMPT
@@ -85,6 +86,7 @@ class Agente:
                     self.registro.evento("regra_nova", regra=regra, origem=origem)
                 except ValueError as e:
                     self.registro.evento("erro", classe="ValueError", mensagem=f"regra não gravada: {e}")
+                    self._avisos.append(f"Executei só desta vez; a regra não foi gravada porque {e}.")
             registrar(resposta != NAO, regra if resposta != NAO else "")
             if resposta == NAO:
                 return "parar", (
@@ -97,6 +99,7 @@ class Agente:
     def perguntar(self, texto, origem="janela"):
         origem = origem if origem == "janela" else "telegram"
         self.registro.evento("pergunta", texto=texto, origem=origem)
+        self._avisos = []
         try:
             r = rodar_laco(
                 self.engine, self.modelo, self._mensagens(texto), self.ferramentas,
@@ -109,10 +112,12 @@ class Agente:
         except Exception as erro:
             self.registro.evento("erro", classe=type(erro).__name__, mensagem=str(erro))
             raise
+        texto_final = "\n\n".join([r.texto, *self._avisos]) if self._avisos else r.texto
+        self._avisos = []
         self.sessao.acrescentar("usuario", texto, origem)
-        self.sessao.acrescentar("atlas", r.texto, origem)
-        self.registro.evento("resposta", texto=r.texto, parou=r.parou, passos=len(r.passos))
-        return r.texto
+        self.sessao.acrescentar("atlas", texto_final, origem)
+        self.registro.evento("resposta", texto=texto_final, parou=r.parou, passos=len(r.passos))
+        return texto_final
 
 
 def criar_agente(
