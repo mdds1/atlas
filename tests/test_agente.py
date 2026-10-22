@@ -189,6 +189,46 @@ class TestSequencial(unittest.TestCase):
         self.assertEqual(estado["maximo"], 1)
 
 
+class TestExtras(unittest.TestCase):
+    def test_ferramenta_extra_roda_sem_pedir_confirmacao_e_fica_no_registro(self):
+        from jarvis_pc.inventario.banco import Banco
+        from jarvis_pc.inventario.ferramentas import criar_ferramentas_inventario
+
+        class Atual:
+            def iniciar(self):
+                return True
+
+            def rodando(self):
+                return False
+
+        banco = Banco()
+        self.addCleanup(banco.fechar)
+        registro = Registro()
+        agente = criar_agente(
+            modelo="falso",
+            confirmar=nunca,
+            registro=registro,
+            executor=ExecutorFalso(),
+            engine=MotorFalso([chamada("inv_status"), final("Sem varredura ainda.")]),
+            extras=criar_ferramentas_inventario(banco, Atual()),
+        )
+        self.assertEqual(perguntar(agente, registro, "o que tem no pc?"), "Sem varredura ainda.")
+        self.assertEqual(tipos(registro), ["pergunta", "chamada", "resposta"])
+        self.assertTrue(registro.eventos[1]["permitido"])
+
+    def test_sem_extras_a_ferramenta_de_inventario_e_barrada(self):
+        registro = Registro()
+        agente = criar_agente(
+            modelo="falso",
+            confirmar=nunca,
+            registro=registro,
+            executor=ExecutorFalso(),
+            engine=MotorFalso([chamada("inv_status"), final("ok")]),
+        )
+        perguntar(agente, registro, "o que tem no pc?")
+        self.assertFalse(registro.eventos[1]["permitido"])
+
+
 class TestMontagem(unittest.TestCase):
     def test_sem_confirmacao_o_agente_nao_e_criado(self):
         for confirmar in (None, "sim", 1):
