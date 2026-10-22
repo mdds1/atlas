@@ -1,7 +1,7 @@
 import json
+import sqlite3
 import unittest
 
-from jarvis_pc.inventario import sistema
 from jarvis_pc.inventario.banco import Banco
 from jarvis_pc.inventario.sistema import coletar_sistema
 from jarvis_pc.leitura import ler_script
@@ -61,8 +61,41 @@ class TestColeta(unittest.TestCase):
         self.assertEqual(self.banco.consultar("SELECT estado FROM varreduras ORDER BY id DESC LIMIT 1")[0]["estado"], "falhou")
 
     def test_json_invalido_e_falha_limpa(self):
+        self.grava_valido()
         r = coletar_sistema(self.banco, executor=ExecutorFalso(saida="isto nao e json"))
         self.assertFalse(r.ok)
+        self.assertEqual(self.estado_ultima(), "falhou")
+        self.assertEqual(len(nomes(self.banco, "apps")), 3)
+
+    def grava_valido(self):
+        coletar_sistema(self.banco, executor=ExecutorFalso(saida=json.dumps(fixture("inventario_sistema"))))
+
+    def estado_ultima(self):
+        return self.banco.consultar("SELECT estado FROM varreduras ORDER BY id DESC LIMIT 1")[0]["estado"]
+
+    def test_excecao_ao_gravar_encerra_como_falhou_sem_relancar(self):
+        self.grava_valido()
+
+        def quebra(*a, **k):
+            raise sqlite3.OperationalError("disco cheio")
+
+        self.banco.gravar = quebra
+        r = coletar_sistema(self.banco, executor=ExecutorFalso(saida=json.dumps(fixture("inventario_sistema"))))
+        self.assertFalse(r.ok)
+        self.assertIn("OperationalError", r.motivo)
+        self.assertEqual(self.estado_ultima(), "falhou")
+        self.assertEqual(self.banco.em_andamento(), [])
+        self.assertEqual(len(nomes(self.banco, "apps")), 3)
+
+    def test_coleta_vazia_e_falha_e_preserva_o_anterior(self):
+        for saida in ("{}", '{"apps": [], "servicos": []}'):
+            with self.subTest(saida=saida):
+                self.grava_valido()
+                r = coletar_sistema(self.banco, executor=ExecutorFalso(saida=saida))
+                self.assertFalse(r.ok)
+                self.assertIn("vazia", r.motivo)
+                self.assertEqual(self.estado_ultima(), "falhou")
+                self.assertEqual(len(nomes(self.banco, "apps")), 3)
 
     def test_usa_o_script_e_um_prazo_longo(self):
         ex = ExecutorFalso(saida=json.dumps(fixture("inventario_sistema")))
@@ -74,7 +107,9 @@ class TestColeta(unittest.TestCase):
 class TestScript(unittest.TestCase):
     def test_script_so_le(self):
         texto = ler_script("inventario_sistema").lower()
-        for proibido in ("remove-", "set-", "new-item", "out-file", "add-content", "stop-", "start-", "restart-", "invoke-"):
+        for proibido in ("remove-", "set-", "new-item", "out-file", "add-content", "stop-", "start-", "restart-", "invoke-",
+                         "clear-", "copy-", "move-", "rename-", "new-", "add-", "enable-", "disable-",
+                         "register-", "export-", "out-", "import-", "iex", " > ", ".exe"):
             with self.subTest(proibido=proibido):
                 self.assertNotIn(proibido, texto)
 

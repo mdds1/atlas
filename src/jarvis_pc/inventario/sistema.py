@@ -46,17 +46,27 @@ def coletar_sistema(banco, executor=executar_powershell, agora=time.time):
         dados = json.loads(resultado.saida)
         if not isinstance(dados, dict):
             raise ValueError("esperado um objeto")
-        total = 0
-        for tabela in TABELAS_SISTEMA:
-            linhas = [
+        tabelas = {
+            tabela: [
                 {k: _texto(v) for k, v in item.items()} for item in _lista(dados.get(tabela)) if isinstance(item, dict)
             ]
-            banco.gravar(tabela, vid, linhas)
-            total += len(linhas)
+            for tabela in TABELAS_SISTEMA
+        }
         pythons = [_texto(p) for p in _lista(dados.get("pythons")) if p]
         npm = _texto(dados.get("npm"))
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, AttributeError):
         banco.encerrar_varredura(vid, "falhou", 1, agora())
         return ResultadoColeta(False, "o PowerShell devolveu um formato inesperado")
+    if not tabelas["apps"] and not tabelas["servicos"]:
+        banco.encerrar_varredura(vid, "falhou", 1, agora())
+        return ResultadoColeta(False, "o PowerShell devolveu a coleta vazia (sem apps nem servicos)")
+    try:
+        total = 0
+        for tabela, linhas in tabelas.items():
+            banco.gravar(tabela, vid, linhas)
+            total += len(linhas)
+    except Exception as erro:
+        banco.encerrar_varredura(vid, "falhou", 1, agora())
+        return ResultadoColeta(False, f"falha ao gravar o inventario do sistema: {type(erro).__name__}")
     banco.encerrar_varredura(vid, "ok", 0, agora())
     return ResultadoColeta(True, "", pythons, npm, total)
