@@ -69,8 +69,8 @@ class Memoria:
         if not alvo:
             raise ValueError("diga o número ou um trecho do fato")
         with self._trava:
-            if alvo.isdigit():
-                achados = [f for f in self._fatos if f["id"] == int(alvo)]
+            if alvo.isdecimal():
+                achados = [f for f in self._fatos if f.get("id") == int(alvo)]
             else:
                 achados = [f for f in self._fatos if _chave(alvo) in _chave(f["texto"])]
             if not achados:

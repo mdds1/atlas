@@ -95,6 +95,21 @@ class TestFerramentas(unittest.TestCase):
         self.assertTrue(r.success)
         self.assertEqual(m.listar(), [])
 
+    def test_esquecer_digito_nao_decimal_nao_estoura(self):
+        m = Memoria()
+        m.lembrar("O time é o Avaí")
+        with self.assertRaises(ValueError) as e:
+            m.esquecer("²")
+        self.assertIn("não achei", str(e.exception))
+
+    def test_esquecer_com_fato_sem_id_nao_da_keyerror(self):
+        m = Memoria()
+        m.lembrar("O time é o Avaí")
+        m._fatos.append({"texto": "fato sem id"})
+        with self.assertRaises(ValueError) as e:
+            m.esquecer("7")
+        self.assertIn("não achei", str(e.exception))
+
     def test_falha_vira_resultado_sem_sucesso(self):
         lembrar, esquecer = criar_ferramentas_memoria(Memoria())
         self.assertFalse(lembrar.execute(fato="").success)
