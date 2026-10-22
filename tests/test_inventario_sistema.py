@@ -73,6 +73,17 @@ class TestColeta(unittest.TestCase):
     def estado_ultima(self):
         return self.banco.consultar("SELECT estado FROM varreduras ORDER BY id DESC LIMIT 1")[0]["estado"]
 
+    def test_excecao_do_executor_encerra_como_falhou_sem_relancar(self):
+        class Quebra:
+            def __call__(self, *a, **k):
+                raise RuntimeError("boom")
+
+        r = coletar_sistema(self.banco, executor=Quebra())
+        self.assertFalse(r.ok)
+        self.assertEqual(r.motivo, "falha ao executar o PowerShell: RuntimeError")
+        self.assertEqual(self.estado_ultima(), "falhou")
+        self.assertEqual(self.banco.em_andamento(), [])
+
     def test_excecao_ao_gravar_encerra_como_falhou_sem_relancar(self):
         self.grava_valido()
 
