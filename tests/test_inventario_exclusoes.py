@@ -127,6 +127,16 @@ class TestSegredos(unittest.TestCase):
         self.assertTrue(self.ex.arquivo_excluido("C:\\Users\\Diniz\\.ssh\\known_hosts"))
         self.assertTrue(self.ex.arquivo_excluido("C:\\Users\\Diniz\\AppData\\Local\\a.txt"))
 
+    def test_pasta_com_nome_de_segredo_e_podada_inteira(self):
+        self.assertTrue(self.ex.pasta_podada("C:\\Users\\Diniz\\Minhas Senhas"))
+        self.assertTrue(self.ex.pasta_podada("C:\\x\\Credenciais"))
+        self.assertTrue(self.ex.arquivo_excluido("C:\\x\\Token Backup\\notas.txt"))
+        self.assertFalse(self.ex.pasta_podada("C:\\Users\\Diniz\\Documentos"))
+
+    def test_chaves_e_configs_de_credencial_ficam_de_fora(self):
+        for nome in ("id_ed25519", "id_ed25519.pub", "a.pfx", "b.p12", "c.ovpn", ".netrc", ".npmrc"):
+            self.assertTrue(self.ex.arquivo_excluido("C:\\x\\" + nome), nome)
+
 
 if __name__ == "__main__":
     unittest.main()

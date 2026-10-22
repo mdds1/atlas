@@ -15,7 +15,7 @@ FOTOS = frozenset(
 )
 PASTAS_SEGREDO = frozenset({".ssh", ".aws", ".gnupg"})
 PASTAS_RUIDO = frozenset({"$recycle.bin", "system volume information"})
-PADROES_NOME = ("*.pem", "*.key", "*.kdbx", "*.ppk", "id_rsa*", ".env", ".env.*", "cookies", "login data")
+PADROES_NOME = ("*.pem", "*.key", "*.kdbx", "*.ppk", "id_rsa*", "id_ed25519*", "*.pfx", "*.p12", "*.ovpn", ".netrc", ".npmrc", ".env", ".env.*", "cookies", "login data")
 PALAVRAS_NOME = ("senha", "password", "token", "secret", "credenc", "credential")
 
 
@@ -52,7 +52,7 @@ class Exclusoes:
         if dentro(caminho, self.pasta_vetada):
             return True
         partes = normalizar(caminho).split("\\")
-        return any(p == "appdata" or p in PASTAS_SEGREDO or p in PASTAS_RUIDO for p in partes)
+        return any(p == "appdata" or p in PASTAS_SEGREDO or p in PASTAS_RUIDO or any(w in p for w in PALAVRAS_NOME) for p in partes)
 
     def arquivo_excluido(self, caminho):
         n = normalizar(caminho)
