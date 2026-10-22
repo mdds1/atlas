@@ -85,13 +85,6 @@ class Banco:
         self._trava = threading.RLock()
         with self._trava:
             self._con.executescript(ESQUEMA)
-            colunas = [r["name"] for r in self._con.execute("PRAGMA table_info(arquivos)")]
-            if "visto_ok" not in colunas:
-                self._con.execute("ALTER TABLE arquivos ADD COLUMN visto_ok INTEGER")
-                self._con.execute(
-                    "UPDATE arquivos SET visto_ok = (SELECT MAX(id) FROM varreduras WHERE tipo = 'arquivos' AND estado = 'ok')"
-                    " WHERE varredura = (SELECT MAX(id) FROM varreduras WHERE tipo = 'arquivos' AND estado = 'ok')"
-                )
             self._con.executescript(VIEWS)
             with self._con:
                 self._con.execute("UPDATE varreduras SET estado = 'falhou' WHERE estado = 'rodando'")
