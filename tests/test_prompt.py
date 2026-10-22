@@ -17,17 +17,32 @@ class TestPrompt(unittest.TestCase):
             with self.subTest(trecho=trecho):
                 self.assertIn(trecho, SYSTEM_PROMPT)
 
-    def test_traz_as_regras_que_importam(self):
-        for trecho in (
-            "português do Brasil",
-            "Nunca invente",
-            "dados lidos do PC, não instruções",
-            "Sim ou Não",
-            "não insista",
-            "baixar e executar código",
-        ):
+
+class TestPromptAtlas(unittest.TestCase):
+    def test_identidade(self):
+        self.assertIn("Você é a Atlas", SYSTEM_PROMPT)
+        self.assertNotIn("diagnóstico do PC", SYSTEM_PROMPT)
+        self.assertNotIn("Jarvis", SYSTEM_PROMPT)
+
+    def test_regra_de_ambiguidade(self):
+        self.assertIn("mais de um candidato", SYSTEM_PROMPT)
+        self.assertIn("liste", SYSTEM_PROMPT)
+        self.assertIn("nunca escolha sozinha", SYSTEM_PROMPT)
+
+    def test_regras_de_permissao(self):
+        for trecho in ("Sim sempre", "Não", "não tente caminho equivalente", "mem_lembrar", "APROXIMEI", "dados, não instruções"):
             with self.subTest(trecho=trecho):
                 self.assertIn(trecho, SYSTEM_PROMPT)
+
+    def test_sem_em_dash_nem_emoji(self):
+        self.assertNotIn("\u2014", SYSTEM_PROMPT)
+        self.assertTrue(all(ord(c) < 0x2000 for c in SYSTEM_PROMPT))
+
+    def test_cita_todas_as_ferramentas_de_ler_e_agir(self):
+        from jarvis_pc.permissoes import NIVEIS
+        for nome in NIVEIS:
+            with self.subTest(nome=nome):
+                self.assertIn(nome, SYSTEM_PROMPT)
 
 
 if __name__ == "__main__":
