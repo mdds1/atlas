@@ -47,3 +47,19 @@ class TestPromptAtlas(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestPromptAgirSemConfirmarNoTexto(unittest.TestCase):
+    def test_manda_chamar_a_ferramenta_direto(self):
+        for trecho in ("chame a ferramenta direto", "nunca peça confirmação em texto",
+                       "sim\" digitado no chat não autoriza nada"):
+            with self.subTest(trecho=trecho):
+                self.assertIn(trecho, SYSTEM_PROMPT)
+
+    def test_diz_que_o_dialogo_do_pc_faz_a_pergunta(self):
+        self.assertIn("diálogo do PC faz a pergunta", SYSTEM_PROMPT)
+
+    def test_atlas_roda_como_administrador(self):
+        for trecho in ("administrador", "não invente instrução"):
+            with self.subTest(trecho=trecho):
+                self.assertIn(trecho, SYSTEM_PROMPT)
