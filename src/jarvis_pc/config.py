@@ -11,6 +11,9 @@ class Config:
     registro: str = "registro.jsonl"
     tecla: str = "J"
     tempo_confirmacao: float = 120.0
+    inventario: str = "inventario.db"
+    raizes: tuple = ("C:\\", "E:\\")
+    atualizar_ao_abrir: bool = True
 
 
 def carregar(caminho):
@@ -33,7 +36,7 @@ def _validar(config, caminho):
     def erro(explicacao):
         return ValueError(f"config inválida em {caminho}: {explicacao}")
 
-    for campo in ("modelo", "host", "registro"):
+    for campo in ("modelo", "host", "registro", "inventario"):
         valor = getattr(config, campo)
         if not isinstance(valor, str) or not valor.strip():
             raise erro(f"{campo} deve ser um texto não vazio")
@@ -43,4 +46,13 @@ def _validar(config, caminho):
     tempo = config.tempo_confirmacao
     if isinstance(tempo, bool) or not isinstance(tempo, (int, float)) or not 0 < tempo <= 3600:
         raise erro("tempo_confirmacao deve ser um número maior que 0 e até 3600 (segundos)")
-    return replace(config, tecla=tecla.upper())
+    raizes = config.raizes
+    if (
+        not isinstance(raizes, (list, tuple))
+        or not raizes
+        or not all(isinstance(r, str) and r.strip() for r in raizes)
+    ):
+        raise erro("raizes deve ser uma lista não vazia de textos (por exemplo, [\"C:\\\\\", \"E:\\\\\"])")
+    if not isinstance(config.atualizar_ao_abrir, bool):
+        raise erro("atualizar_ao_abrir deve ser verdadeiro ou falso")
+    return replace(config, tecla=tecla.upper(), raizes=tuple(raizes))
