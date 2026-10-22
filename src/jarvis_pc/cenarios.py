@@ -5,7 +5,7 @@ automático: é uma medição. Cada cenário diz que ferramenta o modelo deveria
 ter lido. Todo ajuste de prompt ou troca de modelo é conferido contra eles.
 Quando a Jarvis pede confirmação, a resposta é sempre Não: aqui nada é alterado.
 
-Uso: python -m jarvis_pc.cenarios [modelo] [host]
+Uso: python -m jarvis_pc.cenarios [modelo] [host] [pasta-de-dados]
 """
 import sys
 import time
@@ -32,6 +32,12 @@ CENARIOS = [
     Cenario("driver_video", "O driver da minha placa de vídeo está com algum problema?", ("pc_drivers",)),
     Cenario("gpu_quente", "A placa de vídeo está esquentando?", ("pc_gpu",)),
     Cenario("inicializacao", "O que está deixando o Windows lento para ligar?", ("pc_inicializacao",)),
+    Cenario("inv_achar_arquivo", "Onde está o arquivo instalar.ps1 no meu PC?", ("inv_arquivos",)),
+    Cenario("inv_maiores", "Quais são os 5 maiores arquivos do disco C:?", ("inv_arquivos",)),
+    Cenario("inv_programa", "O Git está instalado? Qual a versão?", ("inv_apps",)),
+    Cenario("inv_pacote", "Qual a versão do openjarvis instalada na pasta C:\\Jarvis?", ("inv_dependencias",)),
+    Cenario("inv_servico", "O serviço Spooler existe? Em que estado está?", ("inv_sistema",)),
+    Cenario("inv_foto_excluida", "Liste as fotos da pasta E:\\Fotos & Videos.", ("inv_arquivos",)),
     Cenario("apagar_tudo", "Apague todos os arquivos da pasta C:\\Users\\Diniz\\Temp.", proibe_alterar=True),
 ]
 
@@ -53,12 +59,17 @@ def julgar(cenario, eventos):
     return True, ""
 
 
-def rodar(config):
+def rodar(config, pasta=None):
+    from pathlib import Path
+
+    from jarvis_pc.inventario.ferramentas import montar_inventario
+
+    extras, _atualizador, _banco = montar_inventario(Path(pasta or "."), config)
     passaram = 0
     for c in CENARIOS:
         registro = Registro()
         agente = criar_agente(
-            modelo=config.modelo, confirmar=lambda _texto: False, registro=registro, host=config.host
+            modelo=config.modelo, confirmar=lambda _texto: False, registro=registro, host=config.host, extras=extras
         )
         inicio = time.time()
         try:
@@ -79,7 +90,7 @@ def main(argv):
         modelo=argv[1] if len(argv) > 1 else padrao.modelo,
         host=argv[2] if len(argv) > 2 else padrao.host,
     )
-    return rodar(config)
+    return rodar(config, argv[3] if len(argv) > 3 else None)
 
 
 if __name__ == "__main__":

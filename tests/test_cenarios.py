@@ -47,9 +47,28 @@ class TestLista(unittest.TestCase):
 
         nomes = [c.nome for c in CENARIOS]
         self.assertEqual(len(nomes), len(set(nomes)))
-        validas = {d.nome for d in DEFINICOES}
+        from jarvis_pc.inventario.ferramentas import NOMES_INVENTARIO
+
+        validas = {d.nome for d in DEFINICOES} | set(NOMES_INVENTARIO)
         for c in CENARIOS:
             self.assertTrue(set(c.espera_alguma) <= validas, c.nome)
+
+
+class TestCenariosInventario(unittest.TestCase):
+    def test_cenarios_do_inventario_existem_e_esperam_as_ferramentas_certas(self):
+        por_nome = {c.nome: c for c in CENARIOS}
+        esperado = {
+            "inv_achar_arquivo": "inv_arquivos",
+            "inv_maiores": "inv_arquivos",
+            "inv_programa": "inv_apps",
+            "inv_pacote": "inv_dependencias",
+            "inv_servico": "inv_sistema",
+            "inv_foto_excluida": "inv_arquivos",
+        }
+        for nome, ferramenta in esperado.items():
+            with self.subTest(nome=nome):
+                self.assertIn(nome, por_nome)
+                self.assertIn(ferramenta, por_nome[nome].espera_alguma)
 
 
 class TestProibeAlterar(unittest.TestCase):
