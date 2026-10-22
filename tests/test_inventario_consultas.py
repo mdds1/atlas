@@ -493,6 +493,21 @@ class TestSemAcentoEAproximacao(Base):
         self.assertNotIn("APROXIMEI", t)
         self.assertIn("Não achei nenhum arquivo", t)
 
+    def test_aproximacao_nunca_devolve_arquivo_fora_da_varredura_ok(self):
+        vid = self.b.iniciar_varredura("arquivos", AGORA - 10)
+        self.b.gravar("arquivos", vid, [arq("C:\\Segredo\\orcamento2.xlsx", 5)])
+        t = consultas.arquivos_buscar(self.b, nome="orcamnto2.xlsx")
+        self.assertNotIn("orcamento2", t)
+        self.assertNotIn("Segredo", t)
+        self.assertEqual(consultas.aproximar(self.b, "arquivos_ok", "orcamnto2.xlsx"), ["orcamento.xlsx"])
+
+    def test_aproximacao_e_deterministica_com_muitos_candidatos(self):
+        linhas = [arq("C:\\L\\a%05d.txt" % i, 1) for i in range(300)]
+        b = banco_com_arquivos(linhas)
+        r = [consultas.aproximar(b, "arquivos_ok", "a00150.txt") for _ in range(2)]
+        self.assertEqual(r[0], r[1])
+        self.assertEqual(r[0][0], "a00150.txt")
+
     def test_funcao_sem_acento(self):
         from jarvis_pc.inventario.banco import sem_acento
         self.assertEqual(sem_acento("Ação É"), "acao e")

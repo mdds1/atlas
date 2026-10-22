@@ -107,8 +107,8 @@ def aproximar(banco, tabela, nome, limite=5):
         return []
     linhas = banco.consultar(
         f"SELECT DISTINCT nome FROM {tabela} WHERE length(nome) BETWEEN ? AND ? "
-        "AND sem_acento(substr(nome, 1, 1)) = ? LIMIT 20000",
-        [len(alvo) - 3, len(alvo) + 3, alvo[0]],
+        "AND sem_acento(substr(nome, 1, 1)) = ? ORDER BY nome LIMIT 20000",
+        [len(alvo) - 2, len(alvo) + 2, alvo[0]],
     )
     mapa = {sem_acento(r["nome"]): r["nome"] for r in linhas}
     return [mapa[c] for c in difflib.get_close_matches(alvo, list(mapa), n=limite, cutoff=0.75)]
