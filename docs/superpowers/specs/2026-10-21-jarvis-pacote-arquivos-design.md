@@ -26,6 +26,17 @@ O Matheus ampliou o pedido. Onde este texto diz o contrário, vale esta seção.
    drive, servidores, PC da Marcella) e fora (web). Nenhum dado do inventário sai na
    consulta; resultado da web entra como dado, não como instrução.
 
+5. **Alcance e exclusões (Matheus, 21/10/2026).** Entra todo o PC e toda a rede, **menos**:
+   - a pasta `E:\Fotos & Videos`, inteira, com tudo o que há dentro;
+   - **qualquer foto em `E:\`** (extensões `.jpg .jpeg .png .gif .bmp .webp .heic .heif
+     .tif .tiff .raw .cr2 .nef .dng`), **exceto** o que estiver sob `E:\FORWARD`.
+   Foto excluída não entra em lugar nenhum: nem no índice, nem no inventário (nem pelo
+   nome), nem em `arq_ler`. Hoje isso atinge, além de `Fotos & Videos`, as fotos de
+   `E:\Mãe\...` (fotos, Camera, WhatsApp Images), as imagens da Gincana em
+   `E:\planejamentos\...\04 - Imagens e Dados` e as saídas do `E:\FOOOCUS`.
+   Premissa a confirmar: nas fontes de rede (drive, PC da Marcella) a mesma regra de
+   foto pessoal vale por padrão, e a Marcella decide o que mais fica de fora.
+
 Ordem de construção: (1) inventário deste PC; (2) voz; (3) pesquisa na rede e na web;
 (4) construtor; (5) roteador com Claude, opcional.
 
@@ -160,7 +171,7 @@ indexação em segundo plano com a Jarvis fechada.
 
 ## Perguntas abertas
 
-1. Quais pastas do C: e do E: entram primeiro? Sugestão: Documentos, Desktop, `E:\FloripaOT`
-   e `E:\Aika`. Fica fora `AppData`.
+1. Respondida em 21/10/2026: entra tudo, menos as fotos (ver Revisão, item 5). Falta
+   decidir se `AppData` entra; sugestão: só o inventário de apps, sem o conteúdo.
 2. O modelo de embeddings exato é escolhido na medição da etapa 1a, entre os
    multilíngues de até 300 MB.
