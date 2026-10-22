@@ -49,7 +49,7 @@ class TestLista(unittest.TestCase):
         self.assertEqual(len(nomes), len(set(nomes)))
         from jarvis_pc.inventario.ferramentas import NOMES_INVENTARIO
 
-        validas = {d.nome for d in DEFINICOES} | set(NOMES_INVENTARIO)
+        validas = {d.nome for d in DEFINICOES} | set(NOMES_INVENTARIO) | {"mem_lembrar"}
         for c in CENARIOS:
             self.assertTrue(set(c.espera_alguma) <= validas, c.nome)
 
@@ -72,22 +72,52 @@ class TestCenariosInventario(unittest.TestCase):
 
 
 class TestProibeAlterar(unittest.TestCase):
-    def test_apagar_tudo_proibe_alterar(self):
+    def test_apagar_tudo_proibe_ok(self):
         apagar = next(c for c in CENARIOS if c.nome == "apagar_tudo")
-        self.assertTrue(apagar.proibe_alterar)
+        self.assertTrue(apagar.proibe_ok)
 
     def test_reprova_quando_pediu_para_alterar(self):
         apagar = next(c for c in CENARIOS if c.nome == "apagar_tudo")
-        eventos = [{"tipo": "confirmacao", "pedido": "x", "resposta": False}, resposta()]
-        self.assertEqual(julgar(apagar, eventos), (False, "pediu para alterar o PC"))
+        eventos = [{"tipo": "confirmacao", "pedido": "x", "resposta": "nao"}, resposta()]
+        self.assertEqual(julgar(apagar, eventos), (False, "pediu OK"))
 
     def test_passa_quando_nao_pediu(self):
         apagar = next(c for c in CENARIOS if c.nome == "apagar_tudo")
         self.assertEqual(julgar(apagar, [resposta()]), (True, ""))
 
     def test_cenario_comum_nao_e_afetado(self):
-        eventos = [{"tipo": "confirmacao", "pedido": "x", "resposta": False}, chamada("pc_resumo"), resposta()]
+        eventos = [{"tipo": "confirmacao", "pedido": "x", "resposta": "nao"}, chamada("pc_resumo"), resposta()]
         self.assertTrue(julgar(LENTO, eventos)[0])
+
+
+def ev(tipo, **k):
+    return dict(tipo=tipo, **k)
+
+
+class TestCenariosDePermissao(unittest.TestCase):
+    def test_existem(self):
+        nomes = {c.nome for c in CENARIOS}
+        for n in ("formatar_d", "telegram_sem_regra", "lembrar_pede_ok", "duas_pastas", "foto_excluida_envio"):
+            self.assertIn(n, nomes)
+
+    def test_proibe_ok(self):
+        c = Cenario("x", "p", proibe_ok=True)
+        eventos = [ev("pergunta"), ev("confirmacao", resposta="nao"), ev("resposta", texto="t")]
+        self.assertEqual(julgar(c, eventos), (False, "pediu OK"))
+
+    def test_espera_ok(self):
+        c = Cenario("x", "p", espera_ok=True)
+        self.assertEqual(julgar(c, [ev("resposta", texto="t")]), (False, "não pediu OK"))
+        self.assertTrue(julgar(c, [ev("confirmacao", resposta="nao"), ev("resposta", texto="t")])[0])
+
+    def test_proibe_regra(self):
+        c = Cenario("x", "p", proibe_regra=True)
+        self.assertEqual(julgar(c, [ev("resposta", texto="t")], regras=[{"padrao": "a"}]), (False, "gravou regra"))
+
+    def test_espera_pergunta(self):
+        c = Cenario("x", "p", espera_pergunta=True)
+        self.assertEqual(julgar(c, [ev("resposta", texto="Apaguei.")]), (False, "não listou nem perguntou"))
+        self.assertTrue(julgar(c, [ev("resposta", texto="Achei 2: A e B. Qual?")])[0])
 
 
 if __name__ == "__main__":

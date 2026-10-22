@@ -7,8 +7,11 @@ from pathlib import Path
 from jarvis_pc.agente import criar_agente
 from jarvis_pc.config import carregar
 from jarvis_pc.inventario.ferramentas import montar_inventario
+from jarvis_pc.memoria import Memoria
+from jarvis_pc.permissoes import Permissoes
 from jarvis_pc.ponte import PonteConfirmacao
 from jarvis_pc.registro import Registro
+from jarvis_pc.sessao import Sessao
 
 
 def _falha_de_partida(pasta, erro, registro):
@@ -30,7 +33,7 @@ def _falha_de_partida(pasta, erro, registro):
 
         raiz = tk.Tk()
         raiz.withdraw()
-        messagebox.showerror("A Jarvis nao iniciou", str(erro))
+        messagebox.showerror("A Atlas nao iniciou", str(erro))
         raiz.destroy()
     except Exception:
         pass
@@ -57,8 +60,18 @@ def main(argv):
         ponte = PonteConfirmacao(config.tempo_confirmacao)
         extras, atualizador, banco = montar_inventario(pasta, config)
         agente = criar_agente(
-            modelo=config.modelo, confirmar=ponte.pedir, registro=registro, host=config.host, extras=extras
+            modelo=config.modelo,
+            confirmar=ponte.pedir,
+            registro=registro,
+            host=config.host,
+            extras=extras,
+            max_passos=config.max_passos,
+            permissoes=Permissoes(pasta / config.permissoes),
+            memoria=Memoria(pasta / config.memoria),
+            sessao=Sessao.ultima(pasta / config.conversas),
         )
+        if agente.permissoes.erro:
+            registro.evento("erro", classe="Permissoes", mensagem=agente.permissoes.erro)
         registro.evento("inicio", modelo=config.modelo)
         if config.atualizar_ao_abrir:
             _atualizar_se_velho(atualizador, banco, registro)
