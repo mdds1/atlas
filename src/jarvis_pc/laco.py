@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from openjarvis.core.types import Message, Role, ToolCall, ToolResult
 
 LIMITE_SAIDA = 8000
+RESPOSTA_VAZIA = "Não consegui formular a resposta. Repita o pedido, por favor."
 
 
 @dataclass
@@ -44,6 +45,8 @@ def rodar_laco(engine, modelo, mensagens, ferramentas, autorizar, eh_acao, *, ma
         conteudo = r.get("content") or ""
         brutas = r.get("tool_calls") or []
         if not brutas:
+            if not conteudo.strip():
+                return ResultadoLaco(RESPOSTA_VAZIA, passos, "vazia")
             return ResultadoLaco(conteudo.strip(), passos, "fim")
         chamadas = [
             ToolCall(id=c.get("id") or f"c{i}", name=c.get("name") or "", arguments=c.get("arguments") or "{}")

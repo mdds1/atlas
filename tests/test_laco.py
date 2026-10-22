@@ -39,6 +39,13 @@ def inicio():
 
 
 class TestLaco(unittest.TestCase):
+    def test_resposta_vazia_ou_so_espacos_nunca_chega_vazia(self):
+        for vazio in ("", "   \n "):
+            with self.subTest(vazio=repr(vazio)):
+                r = rodar_laco(MotorFalso([final(vazio)]), "m", inicio(), [], libera, acoes())
+                self.assertEqual(r.texto, "Não consegui formular a resposta. Repita o pedido, por favor.")
+                self.assertEqual(r.parou, "vazia")
+
     def test_resposta_direta(self):
         r = rodar_laco(MotorFalso([final(" Pronto. ")]), "m", inicio(), [], libera, acoes())
         self.assertEqual((r.texto, r.parou, r.passos), ("Pronto.", "fim", []))
