@@ -15,6 +15,16 @@ class TestNormalizar(unittest.TestCase):
         self.assertFalse(dentro("E:\\outra\\FORWARD\\a.png", "E:\\FORWARD"))
 
 
+    def test_prefixo_longo_e_barras_repetidas(self):
+        self.assertEqual(normalizar("\\\\?\\E:\\Mae\\a.jpg"), "e:\\mae\\a.jpg")
+        self.assertEqual(normalizar("\\\\?\\UNC\\srv\\s\\a"), "\\\\srv\\s\\a")
+        self.assertEqual(normalizar("E:\\\\Fotos & Videos\\\\x"), "e:\\fotos & videos\\x")
+
+    def test_ponto_ponto_e_ponto_ou_espaco_final(self):
+        self.assertEqual(normalizar("E:\\FORWARD\\..\\Mae\\a.jpg"), "e:\\mae\\a.jpg")
+        self.assertEqual(normalizar("E:\\Fotos & Videos. "), "e:\\fotos & videos")
+
+
 class TestPastas(unittest.TestCase):
     def setUp(self):
         self.ex = Exclusoes()
@@ -37,6 +47,15 @@ class TestPastas(unittest.TestCase):
                   "C:\\$Recycle.Bin\\S-1", "E:\\System Volume Information"):
             with self.subTest(p=p):
                 self.assertTrue(self.ex.pasta_podada(p))
+
+    def test_formas_equivalentes_da_pasta_vetada(self):
+        self.assertTrue(self.ex.pasta_podada("E:\\\\Fotos & Videos\\x"))
+        self.assertTrue(self.ex.pasta_podada("E:\\Fotos & Videos."))
+        self.assertTrue(self.ex.pasta_podada("\\\\?\\E:\\Fotos & Videos\\x"))
+
+    def test_pasta_parecida_com_appdata_nao_e_podada(self):
+        self.assertFalse(self.ex.arquivo_excluido("C:\\Projetos\\MeuAppData2\\a.txt"))
+        self.assertFalse(self.ex.arquivo_excluido("C:\\x\\appdata2\\b"))
 
     def test_pasta_comum_nao_e_podada(self):
         for p in ("C:\\Jarvis", "E:\\FloripaOT\\Client", "E:\\FORWARD\\05 MARCA", "C:\\"):
@@ -71,6 +90,16 @@ class TestFotos(unittest.TestCase):
         self.assertTrue(self.ex.arquivo_excluido("E:\\Fotos & Videos\\Videos\\festa.mp4"))
         self.assertTrue(self.ex.arquivo_excluido("E:\\Fotos & Videos\\nota.txt"))
 
+    def test_foto_com_prefixo_longo_ou_ponto_ponto_fica_de_fora(self):
+        self.assertTrue(self.ex.arquivo_excluido("\\\\?\\E:\\Mae\\a.jpg"))
+        self.assertTrue(self.ex.arquivo_excluido("E:\\FORWARD\\..\\Mae\\a.jpg"))
+
+    def test_raiz_com_barra_final(self):
+        for raiz in ("/tmp/x/E/", "/tmp/x/E\\"):
+            ex = Exclusoes(raiz_fotos=raiz, pasta_vetada="/tmp/x/E/Fotos", pasta_livre="/tmp/x/E/FORWARD")
+            self.assertTrue(ex.arquivo_excluido("/tmp/x/E/outra/a.jpg"))
+            self.assertFalse(ex.arquivo_excluido("/tmp/x/E/FORWARD/a.jpg"))
+
     def test_raiz_e_regras_sao_configuraveis(self):
         ex = Exclusoes(raiz_fotos="/tmp/x/E", pasta_vetada="/tmp/x/E/Fotos", pasta_livre="/tmp/x/E/FORWARD")
         self.assertTrue(ex.arquivo_excluido("/tmp/x/E/outra/a.jpg"))
@@ -85,7 +114,7 @@ class TestSegredos(unittest.TestCase):
     def test_nomes_de_segredo_ficam_de_fora(self):
         for nome in (".env", ".env.local", "chave.pem", "a.key", "id_rsa", "id_rsa.pub", "cofre.kdbx",
                      "putty.ppk", "Cookies", "Login Data", "SENHAS_lideres.json", "meu-password.txt",
-                     "api_token.txt", "client_secret.json", "credencial.xml", "Credentials.db"):
+                     "api_token.txt", "client_secret.json", "credencial.xml", "Credentials.db", "credenciais.txt", "Credenciais.json"):
             with self.subTest(nome=nome):
                 self.assertTrue(self.ex.arquivo_excluido("C:\\Projetos\\x\\" + nome))
 

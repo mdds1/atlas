@@ -6,6 +6,8 @@ como inventário de apps; segredos nunca entram. Arquivo excluído não aparece
 nem pelo nome. As comparações ignoram maiúscula e aceitam / ou \\.
 """
 import fnmatch
+import ntpath
+import re
 from dataclasses import dataclass
 
 FOTOS = frozenset(
@@ -14,11 +16,25 @@ FOTOS = frozenset(
 PASTAS_SEGREDO = frozenset({".ssh", ".aws", ".gnupg"})
 PASTAS_RUIDO = frozenset({"$recycle.bin", "system volume information"})
 PADROES_NOME = ("*.pem", "*.key", "*.kdbx", "*.ppk", "id_rsa*", ".env", ".env.*", "cookies", "login data")
-PALAVRAS_NOME = ("senha", "password", "token", "secret", "credencial", "credential")
+PALAVRAS_NOME = ("senha", "password", "token", "secret", "credenc", "credential")
 
 
 def normalizar(caminho):
-    return str(caminho).replace("/", "\\").rstrip("\\").lower()
+    """Forma canônica: sem prefixo \\\\?\\, sem barras repetidas, sem . e .., sem ponto/espaço final."""
+    c = str(caminho).replace("/", "\\")
+    if c.lower().startswith("\\\\?\\unc\\"):
+        c = "\\\\" + c[8:]
+    elif c.startswith("\\\\?\\"):
+        c = c[4:]
+    unc = c.startswith("\\\\")
+    c = re.sub(r"\\+", r"\\", c)
+    if unc:
+        c = "\\" + c
+    if not c:
+        return ""
+    c = ntpath.normpath(c)
+    c = "\\".join(seg.rstrip(" .") for seg in c.split("\\"))
+    return c.rstrip("\\").lower()
 
 
 def dentro(caminho, base):
