@@ -4,9 +4,13 @@ Cada coleta grava as linhas novas com o número da sua varredura. Só quando ela
 termina bem (estado "ok") as linhas de varreduras antigas do mesmo tipo são
 apagadas; uma coleta cancelada ou que falhou não destrói o que já existia.
 """
+import logging
 import sqlite3
 import threading
+import time
 import unicodedata
+
+LOG = logging.getLogger(__name__)
 
 TABELAS = {
     "arquivos": ("caminho", "nome", "ext", "pasta", "tamanho", "modificado"),
@@ -101,17 +105,37 @@ class Banco:
                 self._con.execute("UPDATE varreduras SET estado = 'falhou' WHERE estado = 'rodando'")
 
     def _migrar_nome_norm(self):
-        """Banco de antes da coluna nome_norm: ALTER, preenche em Python e indexa."""
+        """Banco de antes da coluna nome_norm: ALTER e preenchimento numa transação só.
+
+        Preenche sempre que sobrar linha com nome e sem nome_norm, não só quando a
+        coluna falta: assim uma migração interrompida se completa na próxima abertura.
+        """
+        inicio = time.perf_counter()
+        migrou = False
         for tabela in ("arquivos", "apps"):
-            colunas = [r["name"] for r in self._con.execute(f"PRAGMA table_info({tabela})")]
-            if "nome_norm" not in colunas:
-                with self._con:
+            self._con.commit()
+            self._con.execute("BEGIN")
+            try:
+                colunas = [r["name"] for r in self._con.execute(f"PRAGMA table_info({tabela})")]
+                if "nome_norm" not in colunas:
                     self._con.execute(f"ALTER TABLE {tabela} ADD COLUMN nome_norm TEXT")
-                    linhas = self._con.execute(f"SELECT rowid, nome FROM {tabela}").fetchall()
-                    self._con.executemany(
-                        f"UPDATE {tabela} SET nome_norm = ? WHERE rowid = ?", [(sem_acento(r["nome"]), r["rowid"]) for r in linhas]
-                    )
+                linhas = self._con.execute(
+                    f"SELECT rowid, nome FROM {tabela} WHERE nome_norm IS NULL AND nome IS NOT NULL"
+                ).fetchall()
+                self._con.executemany(
+                    f"UPDATE {tabela} SET nome_norm = ? WHERE rowid = ?", [(sem_acento(r["nome"]), r["rowid"]) for r in linhas]
+                )
+                self._con.commit()
+            except BaseException:
+                self._con.rollback()
+                raise
+            if linhas:
+                migrou = True
+                LOG.info("migração nome_norm: %d linhas de %s", len(linhas), tabela)
             self._con.execute(f"CREATE INDEX IF NOT EXISTS ix_{tabela}_nome_norm ON {tabela}(nome_norm)")
+        self.migracao_segundos = time.perf_counter() - inicio if migrou else 0.0
+        if migrou:
+            LOG.info("migração nome_norm concluída em %.2f s", self.migracao_segundos)
 
     def fechar(self):
         with self._trava:
