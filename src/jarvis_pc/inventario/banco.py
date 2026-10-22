@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS varreduras (
   itens INTEGER DEFAULT 0, erros INTEGER DEFAULT 0, estado TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS arquivos (
   caminho TEXT PRIMARY KEY, nome TEXT, ext TEXT, pasta TEXT, tamanho INTEGER,
-  modificado REAL, hash TEXT, varredura INTEGER NOT NULL);
+  modificado REAL, hash TEXT, varredura INTEGER NOT NULL, visto_ok INTEGER);
 CREATE INDEX IF NOT EXISTS ix_arquivos_nome ON arquivos(nome);
 CREATE INDEX IF NOT EXISTS ix_arquivos_ext ON arquivos(ext);
 CREATE INDEX IF NOT EXISTS ix_arquivos_tamanho ON arquivos(tamanho);
@@ -36,6 +36,29 @@ CREATE TABLE IF NOT EXISTS servicos (nome TEXT, exibicao TEXT, estado TEXT, inic
 CREATE TABLE IF NOT EXISTS tarefas (caminho TEXT, nome TEXT, estado TEXT, varredura INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS inicializacao (nome TEXT, comando TEXT, local TEXT, varredura INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS pacotes (ambiente TEXT, nome TEXT, versao TEXT, varredura INTEGER NOT NULL);
+"""
+
+# As consultas leem so estas views: elas enxergam apenas a ultima varredura
+# bem-sucedida do tipo dono, nunca linhas de uma coleta falha ou cancelada.
+VIEWS = """
+DROP VIEW IF EXISTS arquivos_ok;
+CREATE VIEW arquivos_ok AS SELECT * FROM arquivos
+  WHERE visto_ok = (SELECT MAX(id) FROM varreduras WHERE tipo = 'arquivos' AND estado = 'ok');
+DROP VIEW IF EXISTS apps_ok;
+CREATE VIEW apps_ok AS SELECT * FROM apps
+  WHERE varredura = (SELECT MAX(id) FROM varreduras WHERE tipo = 'sistema' AND estado = 'ok');
+DROP VIEW IF EXISTS servicos_ok;
+CREATE VIEW servicos_ok AS SELECT * FROM servicos
+  WHERE varredura = (SELECT MAX(id) FROM varreduras WHERE tipo = 'sistema' AND estado = 'ok');
+DROP VIEW IF EXISTS tarefas_ok;
+CREATE VIEW tarefas_ok AS SELECT * FROM tarefas
+  WHERE varredura = (SELECT MAX(id) FROM varreduras WHERE tipo = 'sistema' AND estado = 'ok');
+DROP VIEW IF EXISTS inicializacao_ok;
+CREATE VIEW inicializacao_ok AS SELECT * FROM inicializacao
+  WHERE varredura = (SELECT MAX(id) FROM varreduras WHERE tipo = 'sistema' AND estado = 'ok');
+DROP VIEW IF EXISTS pacotes_ok;
+CREATE VIEW pacotes_ok AS SELECT * FROM pacotes
+  WHERE varredura = (SELECT MAX(id) FROM varreduras WHERE tipo = 'pacotes' AND estado = 'ok');
 """
 
 UPSERT_ARQUIVOS = """
@@ -62,6 +85,14 @@ class Banco:
         self._trava = threading.RLock()
         with self._trava:
             self._con.executescript(ESQUEMA)
+            colunas = [r["name"] for r in self._con.execute("PRAGMA table_info(arquivos)")]
+            if "visto_ok" not in colunas:
+                self._con.execute("ALTER TABLE arquivos ADD COLUMN visto_ok INTEGER")
+                self._con.execute(
+                    "UPDATE arquivos SET visto_ok = (SELECT MAX(id) FROM varreduras WHERE tipo = 'arquivos' AND estado = 'ok')"
+                    " WHERE varredura = (SELECT MAX(id) FROM varreduras WHERE tipo = 'arquivos' AND estado = 'ok')"
+                )
+            self._con.executescript(VIEWS)
             with self._con:
                 self._con.execute("UPDATE varreduras SET estado = 'falhou' WHERE estado = 'rodando'")
 
@@ -103,6 +134,8 @@ class Banco:
                 "UPDATE varreduras SET estado = ?, erros = ?, fim = ? WHERE id = ?", (estado, erros, agora, vid)
             )
             if estado == "ok":
+                if tipo == "arquivos":
+                    self._con.execute("UPDATE arquivos SET visto_ok = ? WHERE varredura = ?", (vid, vid))
                 for tabela in DONAS[tipo]:
                     self._con.execute(f"DELETE FROM {tabela} WHERE varredura <> ?", (vid,))
 

@@ -14,6 +14,18 @@ class TestBanco(unittest.TestCase):
         self.b = Banco()
         self.addCleanup(self.b.fechar)
 
+    def test_views_so_enxergam_a_ultima_varredura_ok(self):
+        self.assertEqual(self.b.consultar("SELECT COUNT(*) AS n FROM arquivos_ok")[0]["n"], 0)
+        v1 = self.b.iniciar_varredura("arquivos", 1.0)
+        self.b.gravar("arquivos", v1, [arq("C:\\a\\x.py"), arq("C:\\a\\y.py")])
+        self.assertEqual(self.b.consultar("SELECT COUNT(*) AS n FROM arquivos_ok")[0]["n"], 0)
+        self.b.encerrar_varredura(v1, "ok", 0, 2.0)
+        v2 = self.b.iniciar_varredura("arquivos", 3.0)
+        self.b.gravar("arquivos", v2, [arq("C:\\a\\x.py"), arq("C:\\a\\z.py")])
+        self.b.encerrar_varredura(v2, "cancelada", 0, 4.0)
+        nomes = sorted(r["nome"] for r in self.b.consultar("SELECT nome FROM arquivos_ok"))
+        self.assertEqual(nomes, ["x.py", "y.py"])
+
     def test_grava_e_consulta_arquivos(self):
         vid = self.b.iniciar_varredura("arquivos", 100.0)
         self.b.gravar("arquivos", vid, [arq("C:\\a\\x.py"), arq("C:\\a\\y.txt", 5)])

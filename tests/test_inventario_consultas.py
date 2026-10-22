@@ -302,5 +302,156 @@ class TestAppsEDependencias(Base):
         self.assertIn("tipo deve ser", consultas.sistema(self.b, "banana"))
 
 
+class TestSoVarreduraOk(Base):
+    def test_sistema_que_falha_nao_duplica_apps(self):
+        b = Banco()
+        v1 = b.iniciar_varredura("sistema", AGORA - 100)
+        b.gravar("apps", v1, [{"origem": "registro", "nome": "Git", "versao": "1", "editor": "", "local": ""}])
+        b.encerrar_varredura(v1, "ok", 0, AGORA - 90)
+        v2 = b.iniciar_varredura("sistema", AGORA - 50)
+        b.gravar("apps", v2, [{"origem": "registro", "nome": "Git", "versao": "1", "editor": "", "local": ""},
+                              {"origem": "registro", "nome": "Novo", "versao": "1", "editor": "", "local": ""}])
+        b.encerrar_varredura(v2, "falhou", 1, AGORA - 40)
+        t = consultas.apps(b)
+        self.assertIn("Achei 1 app(s)", t)
+        self.assertNotIn("Novo", t)
+        self.assertIn("1 app(s)", consultas.status(b, agora=lambda: AGORA))
+
+    def test_arquivos_cancelada_nao_vaza_e_nova_ok_remove(self):
+        b = Banco()
+        v1 = b.iniciar_varredura("arquivos", AGORA - 100)
+        b.gravar("arquivos", v1, [arq("C:\\x.txt"), arq("C:\\y.txt")])
+        b.encerrar_varredura(v1, "ok", 0, AGORA - 90)
+        v2 = b.iniciar_varredura("arquivos", AGORA - 50)
+        b.gravar("arquivos", v2, [arq("C:\\x.txt"), arq("C:\\z.txt")])
+        b.encerrar_varredura(v2, "cancelada", 0, AGORA - 40)
+        t = consultas.arquivos_buscar(b, nome="txt")
+        self.assertIn("Achei 2 arquivo(s)", t)
+        self.assertIn("x.txt", t)
+        self.assertIn("y.txt", t)
+        self.assertNotIn("z.txt", t)
+        self.assertIn(consultas.data_curta(AGORA - 90), t.splitlines()[0])
+        self.assertIn("2 arquivo(s)", consultas.status(b, agora=lambda: AGORA))
+        v3 = b.iniciar_varredura("arquivos", AGORA - 30)
+        b.gravar("arquivos", v3, [arq("C:\\x.txt")])
+        b.encerrar_varredura(v3, "ok", 0, AGORA - 20)
+        t = consultas.arquivos_buscar(b, nome="txt")
+        self.assertIn("Achei 1 arquivo(s)", t)
+        self.assertNotIn("y.txt", t)
+
+    def test_status_informa_ultima_tentativa_que_falhou(self):
+        b = banco_com_arquivos([arq("C:\\a.txt")])
+        v = b.iniciar_varredura("arquivos", AGORA - 10)
+        b.encerrar_varredura(v, "cancelada", 0, AGORA - 5)
+        self.assertIn("cancelada", consultas.status(b, agora=lambda: AGORA))
+
+    def test_aviso_de_dado_velho_em_toda_consulta(self):
+        b = banco_com_arquivos([arq("C:\\a.txt")], fim=AGORA - 3 * 86400)
+        self.assertIn("desatualizado", consultas.arquivos_buscar(b, nome="a", agora=lambda: AGORA))
+        self.assertIn("Dados da varredura de", consultas.arquivos_buscar(b, nome="a", agora=lambda: AGORA).splitlines()[0])
+
+
+class TestPastasExatas(Base):
+    def test_varios_soltos_viram_uma_linha_com_a_soma(self):
+        b = banco_com_arquivos([arq("C:\\A\\um.txt", 10), arq("C:\\A\\dois.txt", 20), arq("C:\\A\\s\\x", 5)])
+        t = consultas.arquivos_pastas(b, "C:\\A")
+        self.assertEqual(t.count("arquivos soltos"), 1)
+        self.assertIn("- (arquivos soltos em C:\\A): 30 B em 2 arquivo(s)", t)
+        self.assertIn("- s: 5 B em 1 arquivo(s)", t)
+
+    def test_arquivo_e_pasta_homonimos(self):
+        for nome_arq in ("foo", "Foo"):
+            with self.subTest(arq=nome_arq):
+                b = banco_com_arquivos([arq("C:\\A\\" + nome_arq, 7), arq("C:\\A\\foo\\x", 3)])
+                t = consultas.arquivos_pastas(b, "C:\\A")
+                self.assertIn("- (arquivos soltos em C:\\A): 7 B em 1 arquivo(s)", t)
+                self.assertIn("- foo: 3 B em 1 arquivo(s)", t)
+
+    def test_subpastas_com_maiusculas_diferentes_somam_juntas(self):
+        b = banco_com_arquivos([arq("C:\\A\\Foo\\x", 3), arq("C:\\A\\foo\\y", 4)])
+        t = consultas.arquivos_pastas(b, "C:\\A")
+        self.assertEqual(sum(1 for l in t.splitlines() if l.startswith("- ")), 1)
+        self.assertIn("7 B em 2 arquivo(s)", t)
+
+    def test_soma_das_linhas_bate_com_o_total(self):
+        b = banco_com_arquivos([arq("C:\\A\\a", 1), arq("C:\\A\\b", 2), arq("C:\\A\\s\\c", 4), arq("C:\\A\\t\\d", 8)])
+        t = consultas.arquivos_pastas(b, "C:\\A")
+        self.assertEqual(sum(int(l.split(": ")[1].split(" B")[0]) for l in t.splitlines() if l.startswith("- ")), 15)
+
+    def test_soltos_ficam_fora_do_limite(self):
+        b = banco_com_arquivos([arq("C:\\A\\a", 1), arq("C:\\A\\s\\c", 4), arq("C:\\A\\t\\d", 8)])
+        t = consultas.arquivos_pastas(b, "C:\\A", limite=1)
+        self.assertIn("soltos", t)
+        self.assertIn("- t:", t)
+        self.assertNotIn("- s:", t)
+
+
+class TestDuplicadosRobustos(Base):
+    def setUp(self):
+        import jarvis_pc.inventario.consultas as c
+        self._antigo = c.LIMITE_HASH
+        self.addCleanup(setattr, c, "LIMITE_HASH", self._antigo)
+
+    def test_limite_de_hash_da_resultado_parcial_e_converge(self):
+        consultas.LIMITE_HASH = 3
+        b = banco_com_arquivos([arq(f"C:\\d{i}\\x.bin", 2 * MB) for i in range(7)])
+        chamadas = []
+        calc = lambda c: chamadas.append(c) or "H"
+        t1 = consultas.arquivos_duplicados(b, calcular_hash=calc)
+        self.assertIn("Resultado parcial: faltam 4 arquivo(s) a verificar. Pergunte de novo para continuar.", t1)
+        t2 = consultas.arquivos_duplicados(b, calcular_hash=calc)
+        self.assertIn("faltam 1 arquivo(s)", t2)
+        t3 = consultas.arquivos_duplicados(b, calcular_hash=calc)
+        self.assertNotIn("parcial", t3)
+        self.assertIn("7 cópias", t3)
+        self.assertIn("desperdício de 12.0 MB", t3)
+        self.assertEqual(len(chamadas), 7)
+
+    def test_ilegiveis_ganham_sentinela_e_nao_travam_o_orcamento(self):
+        consultas.LIMITE_HASH = 3
+        linhas = [arq(f"C:\\u{i}\\z.bin", 3 * MB) for i in range(5)]
+        linhas += [arq("C:\\a\\x.bin", 2 * MB), arq("C:\\b\\x.bin", 2 * MB)]
+        b = banco_com_arquivos(linhas)
+        calc = lambda c: None if c.endswith("z.bin") else "H"
+        consultas.arquivos_duplicados(b, calcular_hash=calc)
+        chamadas = []
+        t = consultas.arquivos_duplicados(b, calcular_hash=lambda c: chamadas.append(c) or calc(c))
+        self.assertEqual(chamadas, [])
+        self.assertIn("C:\\a\\x.bin", t)
+        self.assertIn("5 arquivo(s) ilegível(is) ignorado(s)", t)
+
+    def test_upsert_preserva_o_sentinela_se_nada_mudou(self):
+        b = banco_com_arquivos([arq("C:\\a\\z.bin", 3 * MB), arq("C:\\b\\z.bin", 3 * MB)])
+        consultas.arquivos_duplicados(b, calcular_hash=lambda c: None)
+        v = b.iniciar_varredura("arquivos", AGORA)
+        b.gravar("arquivos", v, [arq("C:\\a\\z.bin", 3 * MB), arq("C:\\b\\z.bin", 3 * MB)])
+        b.encerrar_varredura(v, "ok", 0, AGORA + 1)
+        chamadas = []
+        consultas.arquivos_duplicados(b, calcular_hash=lambda c: chamadas.append(c) or None)
+        self.assertEqual(chamadas, [])
+
+    def test_duplicados_ignoram_arquivo_de_varredura_cancelada(self):
+        b = banco_com_arquivos([arq("C:\\a\\x.bin", 2 * MB)])
+        v = b.iniciar_varredura("arquivos", AGORA)
+        b.gravar("arquivos", v, [arq("C:\\a\\x.bin", 2 * MB), arq("C:\\b\\x.bin", 2 * MB)])
+        b.encerrar_varredura(v, "cancelada", 0, AGORA + 1)
+        chamadas = []
+        t = consultas.arquivos_duplicados(b, calcular_hash=lambda c: chamadas.append(c) or "H", agora=lambda: AGORA)
+        self.assertIn("Não achei", t)
+        self.assertEqual(chamadas, [])
+
+    def test_vazios_nao_sao_duplicados(self):
+        b = banco_com_arquivos([arq("C:\\a\\v", 0), arq("C:\\b\\v", 0)])
+        self.assertIn("Não achei", consultas.arquivos_duplicados(b, minimo_mb=0, calcular_hash=lambda c: "H"))
+
+    def test_mostra_quantos_grupos_e_copias_ficaram_de_fora(self):
+        b = banco_com_arquivos([arq(f"C:\\d{i}\\x.bin", 2 * MB) for i in range(8)])
+        t = consultas.arquivos_duplicados(b, calcular_hash=lambda c: "H")
+        self.assertIn("e mais 2 cópia(s)", t)
+        linhas = [arq(f"C:\\g{g}\\{i}.bin", (2 + g) * MB) for g in range(3) for i in range(2)]
+        t = consultas.arquivos_duplicados(banco_com_arquivos(linhas), limite=2, calcular_hash=lambda c: "H" + str(c)[3])
+        self.assertIn("mostrando 2 de 3 grupo(s)", t)
+
+
 if __name__ == "__main__":
     unittest.main()
