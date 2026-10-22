@@ -12,6 +12,8 @@ Data: 22/10/2026. Estado: decisoes em andamento, spec ainda nao escrito.
 6. Cerebro **hibrido**: gemma4:12b local para o simples; Claude pela API para o longo ou dificil.
 7. Roteamento: **a Atlas decide e pede OK** mostrando o que sai; "nao pergunte mais" vale aqui tambem. Segredos, fotos excluidas e conteudo nao aprovado nunca saem, em codigo.
 
+8. **Canal remoto: Telegram pelo Home Assistant do A21s** (ligado 24h). O HA recebe a mensagem, manda WoL se o PC estiver desligado e repassa a Atlas pela rede local; pedidos de OK voltam como botoes no chat. O PC e o cerebro (gemma); o servidor Proxmox nao participa e pode dormir. A Atlas ganha uma porta local que so aceita o A21s (LAN e Tailscale) e avisa quando a ponte ficar muda.
+
 ## Pendente
 
 - Conta e chave da API Anthropic (console.anthropic.com, credito pre-pago) e o teto de gasto: o Matheus vai ver. Proposta: teto mensal + aviso por tarefa, valores no config; rota para o Claude desligada ate existir a chave.
@@ -25,4 +27,5 @@ Data: 22/10/2026. Estado: decisoes em andamento, spec ainda nao escrito.
 3. Programas e sistema.
 4. Pesquisa na web.
 5. Rede da casa.
-6. Roteador para o Claude (quando houver chave).
+6. Canal Telegram pelo HA do A21s.
+7. Roteador para o Claude (quando houver chave).
