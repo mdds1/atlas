@@ -1,0 +1,17 @@
+{
+  "apps": [
+    {"origem": "registro", "nome": "Git", "versao": "2.43.0", "editor": "The Git Development Community", "local": "C:\\Program Files\\Git"},
+    {"origem": "registro", "nome": "Ollama", "versao": "0.40.5", "editor": "Ollama", "local": "C:\\Users\\Diniz\\AppData\\Local\\Programs\\Ollama"},
+    {"origem": "loja", "nome": "Microsoft.WindowsCalculator", "versao": "11.2.0.0", "editor": "CN=Microsoft", "local": "C:\\Program Files\\WindowsApps\\calc"}
+  ],
+  "servicos": [
+    {"nome": "Spooler", "exibicao": "Spooler de Impressão", "estado": "Running", "inicio": "Auto"},
+    {"nome": "wuauserv", "exibicao": "Windows Update", "estado": "Stopped", "inicio": "Manual"}
+  ],
+  "tarefas": [
+    {"caminho": "\\Microsoft\\Windows\\Defrag\\", "nome": "ScheduledDefrag", "estado": "Ready"}
+  ],
+  "inicializacao": {"nome": "Discord", "comando": "C:\\Discord\\Update.exe", "local": "HKCU\\Run"},
+  "pythons": ["C:\\Users\\Diniz\\AppData\\Local\\Programs\\Python\\Python310\\"],
+  "npm": "C:\\Users\\Diniz\\AppData\\Roaming\\npm\\node_modules"
+}
