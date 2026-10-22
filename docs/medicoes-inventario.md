@@ -42,4 +42,4 @@ inv_foto_excluida falha em todos: nenhum chama a ferramenta e recusa direto. Pod
 
 ## Aceitacao (Matheus)
 
-Pendente.
+22/10/2026: o Matheus fez as 8 perguntas na janela nova e disse que as respostas foram certas. Nao detalhou item a item. Os tres modelos extras foram apagados do PC (29 GB liberados).
