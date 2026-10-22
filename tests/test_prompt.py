@@ -6,9 +6,16 @@ from jarvis_pc.prompt import SYSTEM_PROMPT
 
 class TestPrompt(unittest.TestCase):
     def test_cita_todas_as_ferramentas(self):
-        for nome in [d.nome for d in DEFINICOES] + ["pc_comando"]:
+        from jarvis_pc.inventario.ferramentas import NOMES_INVENTARIO
+
+        for nome in [d.nome for d in DEFINICOES] + ["pc_comando"] + list(NOMES_INVENTARIO):
             with self.subTest(ferramenta=nome):
                 self.assertIn(nome, SYSTEM_PROMPT)
+
+    def test_manda_usar_o_inventario_e_citar_a_data(self):
+        for trecho in ("inv_arquivos", "data da varredura", "nunca estime"):
+            with self.subTest(trecho=trecho):
+                self.assertIn(trecho, SYSTEM_PROMPT)
 
     def test_traz_as_regras_que_importam(self):
         for trecho in (

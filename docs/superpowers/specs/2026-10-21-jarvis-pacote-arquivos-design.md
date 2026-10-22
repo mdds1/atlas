@@ -176,3 +176,9 @@ indexação em segundo plano com a Jarvis fechada.
    `AppData` só como inventário de apps, sem conteúdo.
 2. O modelo de embeddings exato é escolhido na medição da etapa 1a, entre os
    multilíngues de até 300 MB.
+
+## Estado da etapa 1 (inventario deste PC)
+
+22/10/2026: **entregue com ressalvas**. Varredura real de 899.965 arquivos, 389 apps, 303 servicos e 193 pacotes em 114 s, banco de 420 MB. Exclusoes conferidas no banco real (fotos em E: fora da FORWARD, Fotos & Videos, AppData, segredos e pastas de segredo: zero). Cenarios: 13 de 14 no gemma4:12b e 11 de 14 no e4b; o cenario inv_foto_excluida falha porque o modelo recusa sem chamar a ferramenta. Aceitacao das 8 perguntas: certas, segundo o Matheus. Comparados qwen3:14b, gpt-oss:20b e qwen3.5:9b: nenhum superou o gemma4:12b na placa de 12 GB. Detalhes em `docs/medicoes-inventario.md`.
+
+Ressalvas: arquivos com atributo de reparse (OneDrive, deduplicacao) ficam de fora sem aviso; hash de duplicados com prazo de 60 s; nome do assistente passa a ser Atlas e o visual sera invisivel (indicador por voz), no spec da voz.

@@ -31,12 +31,12 @@ def montar_texto_confirmacao(pendente, texto_padrao):
 
 
 def criar_agente(
-    *, modelo, confirmar, registro, executor=executar_powershell, engine=None, host=None, max_turns=8
+    *, modelo, confirmar, registro, executor=executar_powershell, engine=None, host=None, max_turns=8, extras=()
 ):
     """Cria o agente. `confirmar(texto) -> bool` é obrigatório: sem ele, nada executa."""
     if not callable(confirmar):
         raise ValueError("confirmar é obrigatório: sem ele a Jarvis não executa nada")
-    ferramentas = criar_ferramentas_leitura(executor) + [ComandoPcTool(executor)]
+    ferramentas = criar_ferramentas_leitura(executor) + [ComandoPcTool(executor)] + list(extras)
     conhecidas = {f.spec.name for f in ferramentas}
     pendente = {}
 

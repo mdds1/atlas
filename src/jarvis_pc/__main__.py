@@ -6,6 +6,7 @@ from pathlib import Path
 
 from jarvis_pc.agente import criar_agente
 from jarvis_pc.config import carregar
+from jarvis_pc.inventario.ferramentas import montar_inventario
 from jarvis_pc.ponte import PonteConfirmacao
 from jarvis_pc.registro import Registro
 
@@ -35,17 +36,32 @@ def _falha_de_partida(pasta, erro, registro):
         pass
 
 
+def _atualizar_se_velho(atualizador, banco, registro):
+    """Refaz o inventário ao abrir se faltar varredura ou se ela tiver mais de um dia. Nunca trava a janela."""
+    try:
+        ultima = banco.ultima_varredura("arquivos")
+        if ultima is None or time.time() - ultima["fim"] > 86400:
+            atualizador.iniciar()
+    except Exception as erro:
+        registro.evento("erro", classe=type(erro).__name__, mensagem=str(erro))
+
+
 def main(argv):
     pasta = Path(argv[1]) if len(argv) > 1 else Path.cwd()
     registro = None
+    atualizador = None
+    banco = None
     try:
         config = carregar(pasta / "config.json")
         registro = Registro(pasta / config.registro)
         ponte = PonteConfirmacao(config.tempo_confirmacao)
+        extras, atualizador, banco = montar_inventario(pasta, config)
         agente = criar_agente(
-            modelo=config.modelo, confirmar=ponte.pedir, registro=registro, host=config.host
+            modelo=config.modelo, confirmar=ponte.pedir, registro=registro, host=config.host, extras=extras
         )
         registro.evento("inicio", modelo=config.modelo)
+        if config.atualizar_ao_abrir:
+            _atualizar_se_velho(atualizador, banco, registro)
         from jarvis_pc.janela import Janela
 
         Janela(agente, registro, ponte, config.tecla).iniciar()
@@ -54,6 +70,13 @@ def main(argv):
         _falha_de_partida(pasta, erro, registro)
         return 1
     finally:
+        if atualizador is not None:
+            atualizador.cancelar()
+        if banco is not None:
+            try:
+                banco.fechar()
+            except Exception:
+                pass
         if registro is not None:
             registro.evento("fim")
 

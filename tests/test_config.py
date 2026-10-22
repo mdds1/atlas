@@ -85,6 +85,39 @@ class TestConfig(unittest.TestCase):
             c, Config(modelo="m", host="http://h:1", registro="r.jsonl", tecla="K", tempo_confirmacao=60)
         )
 
+    def test_padroes_do_inventario(self):
+        c = Config()
+        self.assertEqual(c.inventario, "inventario.db")
+        self.assertEqual(c.raizes, ("C:\\", "E:\\"))
+        self.assertIs(c.atualizar_ao_abrir, True)
+
+    def test_raizes_vem_como_lista_e_viram_tupla(self):
+        pasta, caminho = com_arquivo('{"raizes": ["C:\\\\", "D:\\\\"], "atualizar_ao_abrir": false}')
+        with pasta:
+            c = carregar(caminho)
+        self.assertEqual(c.raizes, ("C:\\", "D:\\"))
+        self.assertIs(c.atualizar_ao_abrir, False)
+
+    def test_raizes_invalidas_sao_recusadas(self):
+        for texto in ('{"raizes": []}', '{"raizes": "C:\\\\"}', '{"raizes": ["C:\\\\", ""]}', '{"raizes": [1]}'):
+            with self.subTest(texto=texto):
+                pasta, caminho = com_arquivo(texto)
+                with pasta:
+                    with self.assertRaises(ValueError):
+                        carregar(caminho)
+
+    def test_atualizar_ao_abrir_so_aceita_booleano(self):
+        pasta, caminho = com_arquivo('{"atualizar_ao_abrir": "sim"}')
+        with pasta:
+            with self.assertRaises(ValueError):
+                carregar(caminho)
+
+    def test_nome_do_banco_precisa_ser_texto_nao_vazio(self):
+        pasta, caminho = com_arquivo('{"inventario": ""}')
+        with pasta:
+            with self.assertRaises(ValueError):
+                carregar(caminho)
+
 
 if __name__ == "__main__":
     unittest.main()
