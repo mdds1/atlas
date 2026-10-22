@@ -201,6 +201,6 @@ class TestSimSempreComCuringa(unittest.TestCase):
             c = Path(t) / "permissoes.json"
             p = Permissoes(c)
             with self.assertRaises(ValueError):
-                p.gravar_regra("pc_comando", {"comando": "Remove-Item C:\\a\\*"}, "janela")
+                p.gravar_regra("pc_comando", {"comando": "Get-ChildItem C:\\a\\*"}, "janela")
             self.assertEqual(p.regras, [])
             self.assertFalse(c.exists())
