@@ -235,6 +235,11 @@ class TestDuplicados(Base):
 
 
 class TestAppsEDependencias(Base):
+    def test_apps_aproxima(self):
+        t = consultas.apps(self.b, nome="Olama")
+        self.assertIn("APROXIMEI", t)
+        self.assertIn("Ollama", t)
+
     def setUp(self):
         self.b = Banco()
         vid = self.b.iniciar_varredura("sistema", AGORA - 60)
@@ -455,3 +460,40 @@ class TestDuplicadosRobustos(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestSemAcentoEAproximacao(Base):
+    def setUp(self):
+        self.b = banco_com_arquivos(
+            [
+                arq("C:\\Docs\\Relatório Anual.docx", 10),
+                arq("C:\\Docs\\orcamento.xlsx", 20),
+                arq("C:\\Jarvis\\instalar.ps1", 30),
+            ]
+        )
+
+    def test_sem_acento_e_sem_maiuscula(self):
+        t = consultas.arquivos_buscar(self.b, nome="RELATORIO")
+        self.assertIn("C:\\Docs\\Relatório Anual.docx", t)
+        self.assertNotIn("APROXIMEI", t)
+        self.assertIn("C:\\Docs\\orcamento.xlsx", consultas.arquivos_buscar(self.b, nome="orçamento"))
+
+    def test_aproxima_so_quando_a_exata_nao_acha_e_avisa(self):
+        t = consultas.arquivos_buscar(self.b, nome="instalr.ps1")
+        self.assertIn("APROXIMEI", t)
+        self.assertIn("instalar.ps1", t)
+
+    def test_sem_parecido_continua_nao_achei(self):
+        t = consultas.arquivos_buscar(self.b, nome="zzzzzz")
+        self.assertIn("Não achei nenhum arquivo", t)
+        self.assertNotIn("APROXIMEI", t)
+
+    def test_mesma_inicial_e_tamanho_mas_distante_nao_aproxima(self):
+        t = consultas.arquivos_buscar(self.b, nome="oxxxxxxxxxxxx")
+        self.assertNotIn("APROXIMEI", t)
+        self.assertIn("Não achei nenhum arquivo", t)
+
+    def test_funcao_sem_acento(self):
+        from jarvis_pc.inventario.banco import sem_acento
+        self.assertEqual(sem_acento("Ação É"), "acao e")
+        self.assertIsNone(sem_acento(None))

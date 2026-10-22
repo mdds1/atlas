@@ -6,6 +6,7 @@ apagadas; uma coleta cancelada ou que falhou não destrói o que já existia.
 """
 import sqlite3
 import threading
+import unicodedata
 
 TABELAS = {
     "arquivos": ("caminho", "nome", "ext", "pasta", "tamanho", "modificado"),
@@ -78,10 +79,19 @@ def _linha(colunas, linha):
     return tuple(linha)
 
 
+def sem_acento(texto):
+    """Forma de comparação: sem acento e sem maiúscula. Registrada no SQLite."""
+    if texto is None:
+        return None
+    t = unicodedata.normalize("NFKD", str(texto))
+    return "".join(c for c in t if not unicodedata.combining(c)).casefold()
+
+
 class Banco:
     def __init__(self, caminho=":memory:"):
         self._con = sqlite3.connect(str(caminho), check_same_thread=False)
         self._con.row_factory = sqlite3.Row
+        self._con.create_function("sem_acento", 1, sem_acento, deterministic=True)
         self._trava = threading.RLock()
         with self._trava:
             self._con.executescript(ESQUEMA)
