@@ -62,8 +62,8 @@ class Banco:
         self._trava = threading.RLock()
         with self._trava:
             self._con.executescript(ESQUEMA)
-            self._con.execute("UPDATE varreduras SET estado = 'falhou' WHERE estado = 'rodando'")
-            self._con.commit()
+            with self._con:
+                self._con.execute("UPDATE varreduras SET estado = 'falhou' WHERE estado = 'rodando'")
 
     def fechar(self):
         with self._trava:
@@ -72,11 +72,10 @@ class Banco:
     def iniciar_varredura(self, tipo, agora):
         if tipo not in DONAS:
             raise ValueError(f"tipo de varredura desconhecido: {tipo}")
-        with self._trava:
+        with self._trava, self._con:
             cur = self._con.execute(
                 "INSERT INTO varreduras (tipo, inicio, estado) VALUES (?, ?, 'rodando')", (tipo, agora)
             )
-            self._con.commit()
             return cur.lastrowid
 
     def gravar(self, tabela, vid, linhas):
@@ -84,7 +83,7 @@ class Banco:
             raise ValueError(f"tabela desconhecida: {tabela}")
         colunas = TABELAS[tabela]
         dados = [_linha(colunas, l) + (vid,) for l in linhas]
-        with self._trava:
+        with self._trava, self._con:
             if tabela == "arquivos":
                 self._con.executemany(UPSERT_ARQUIVOS, dados)
             else:
@@ -92,15 +91,13 @@ class Banco:
                 self._con.executemany(
                     f"INSERT INTO {tabela} ({', '.join(colunas)}, varredura) VALUES ({marcas})", dados
                 )
-            self._con.commit()
 
     def progresso(self, vid, itens):
-        with self._trava:
+        with self._trava, self._con:
             self._con.execute("UPDATE varreduras SET itens = ? WHERE id = ?", (itens, vid))
-            self._con.commit()
 
     def encerrar_varredura(self, vid, estado, erros, agora):
-        with self._trava:
+        with self._trava, self._con:
             tipo = self._con.execute("SELECT tipo FROM varreduras WHERE id = ?", (vid,)).fetchone()["tipo"]
             self._con.execute(
                 "UPDATE varreduras SET estado = ?, erros = ?, fim = ? WHERE id = ?", (estado, erros, agora, vid)
@@ -108,7 +105,6 @@ class Banco:
             if estado == "ok":
                 for tabela in DONAS[tipo]:
                     self._con.execute(f"DELETE FROM {tabela} WHERE varredura <> ?", (vid,))
-            self._con.commit()
 
     def ultima_varredura(self, tipo):
         with self._trava:
@@ -122,10 +118,13 @@ class Banco:
             return [dict(r) for r in self._con.execute("SELECT * FROM varreduras WHERE estado = 'rodando'")]
 
     def definir_hash(self, caminho, valor):
-        with self._trava:
+        with self._trava, self._con:
             self._con.execute("UPDATE arquivos SET hash = ? WHERE caminho = ?", (valor, caminho))
-            self._con.commit()
 
     def consultar(self, sql, params=()):
+        texto = sql.strip()
+        primeiro = texto.split(None, 1)[0].upper() if texto else ""
+        if primeiro not in ("SELECT", "WITH") or ";" in texto.rstrip(";"):
+            raise ValueError("consultar aceita apenas SELECT")
         with self._trava:
-            return self._con.execute(sql, params).fetchall()
+            return self._con.execute(texto, params).fetchall()

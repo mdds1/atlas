@@ -109,6 +109,43 @@ class TestBanco(unittest.TestCase):
             with self.subTest(tabela=tabela):
                 self.b.consultar(f"SELECT COUNT(*) FROM {tabela}")
 
+    def test_gravar_com_linha_invalida_nao_deixa_parcial(self):
+        vid = self.b.iniciar_varredura("arquivos", 1.0)
+        with self.assertRaises(Exception):
+            self.b.gravar("arquivos", vid, [arq("C:\\ok1.txt"), arq("C:\\ok2.txt"), ("C:\\ruim.txt", "x")])
+        self.b.progresso(vid, 5)
+        self.assertEqual(self.b.consultar("SELECT COUNT(*) AS n FROM arquivos")[0]["n"], 0)
+
+    def test_encerrar_que_falha_nao_deixa_estado_ok(self):
+        import jarvis_pc.inventario.banco as modulo
+
+        vid = self.b.iniciar_varredura("arquivos", 1.0)
+        original = dict(modulo.DONAS)
+        modulo.DONAS["arquivos"] = ("tabela_que_nao_existe",)
+        try:
+            with self.assertRaises(Exception):
+                self.b.encerrar_varredura(vid, "ok", 0, 2.0)
+        finally:
+            modulo.DONAS.clear()
+            modulo.DONAS.update(original)
+        self.b.progresso(vid, 1)
+        estado = self.b.consultar("SELECT estado FROM varreduras WHERE id = ?", (vid,))[0]["estado"]
+        self.assertEqual(estado, "rodando")
+
+    def test_consultar_aceita_select_e_with(self):
+        self.assertEqual(self.b.consultar("  select 1 AS n")[0]["n"], 1)
+        self.assertEqual(self.b.consultar("WITH t AS (SELECT 2 AS n) SELECT n FROM t;")[0]["n"], 2)
+
+    def test_consultar_recusa_o_que_nao_e_leitura(self):
+        vid = self.b.iniciar_varredura("sistema", 1.0)
+        self.b.gravar("apps", vid, [("registro", "Git", "1", "", "")])
+        for sql in ("DELETE FROM apps", "DROP TABLE apps", "UPDATE apps SET nome = 'x'",
+                    "INSERT INTO apps (nome, varredura) VALUES ('y', 1)", "SELECT 1; DROP TABLE apps"):
+            with self.subTest(sql=sql):
+                with self.assertRaises(ValueError):
+                    self.b.consultar(sql)
+        self.assertEqual(self.b.consultar("SELECT nome FROM apps")[0]["nome"], "Git")
+
 
 if __name__ == "__main__":
     unittest.main()
