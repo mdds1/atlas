@@ -145,6 +145,8 @@ class Permissoes:
         if decisao.nivel != AGIR or decisao.acao == "recusar":
             raise ValueError(f"não cabe regra para {nome!r}")
         padrao = alvo_de(nome, argumentos)
+        if "*" in padrao or not estreita(padrao):
+            raise ValueError("alvo com curinga ou largo demais não vira regra")
         with self._trava:
             if not any(r["ferramenta"] == nome and r["padrao"].casefold() == padrao.casefold() for r in self.regras):
                 self.regras.append(

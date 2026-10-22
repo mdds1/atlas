@@ -193,3 +193,14 @@ class TestSimSempre(unittest.TestCase):
         p.gravar_regra("pc_comando", self.ARGS, "janela")
         p.gravar_regra("pc_comando", self.ARGS, "janela")
         self.assertEqual(len(p.regras), 1)
+
+
+class TestSimSempreComCuringa(unittest.TestCase):
+    def test_alvo_com_curinga_nao_grava(self):
+        with tempfile.TemporaryDirectory() as t:
+            c = Path(t) / "permissoes.json"
+            p = Permissoes(c)
+            with self.assertRaises(ValueError):
+                p.gravar_regra("pc_comando", {"comando": "Remove-Item C:\\a\\*"}, "janela")
+            self.assertEqual(p.regras, [])
+            self.assertFalse(c.exists())
