@@ -119,5 +119,35 @@ class TestConfig(unittest.TestCase):
                 carregar(caminho)
 
 
+    def test_padroes_da_atlas(self):
+        c = Config()
+        self.assertEqual(c.conversas, "conversas")
+        self.assertEqual(c.memoria, "memoria.json")
+        self.assertEqual(c.permissoes, "permissoes.json")
+        self.assertEqual(c.max_passos, 30)
+        self.assertEqual(c.tempo_confirmacao, 300.0)
+
+    def test_max_passos_valido(self):
+        pasta, caminho = com_arquivo('{"max_passos": 12}')
+        with pasta:
+            self.assertEqual(carregar(caminho).max_passos, 12)
+
+    def test_max_passos_invalido_e_recusado(self):
+        for texto in ('{"max_passos": 0}', '{"max_passos": 101}', '{"max_passos": true}', '{"max_passos": 2.5}', '{"max_passos": "30"}'):
+            with self.subTest(texto=texto):
+                pasta, caminho = com_arquivo(texto)
+                with pasta:
+                    with self.assertRaises(ValueError):
+                        carregar(caminho)
+
+    def test_caminhos_novos_precisam_de_texto(self):
+        for campo in ("conversas", "memoria", "permissoes"):
+            with self.subTest(campo=campo):
+                pasta, caminho = com_arquivo('{"%s": ""}' % campo)
+                with pasta:
+                    with self.assertRaises(ValueError):
+                        carregar(caminho)
+
+
 if __name__ == "__main__":
     unittest.main()
