@@ -1,4 +1,14 @@
-"""Roda as três coletas em segundo plano, uma de cada vez, sem travar a janela."""
+"""Roda as três coletas em segundo plano, uma de cada vez, sem travar a janela.
+
+Premissa: um Atualizador por banco. A trava daqui só impede duas rodadas do
+mesmo Atualizador; dois Atualizadores no mesmo banco se atrapalhariam
+(`_encerrar_pendentes` encerraria a varredura em curso do outro).
+
+A thread é daemon. Ao fechar a janela, `cancelar()` não espera a thread: o
+banco pode ser fechado no meio da rodada. Isso não corrompe nada (cada
+operação do Banco segura a trava dele), a rodada morre com erro de banco
+fechado e a varredura que ficou "rodando" vira "falhou" na próxima abertura.
+"""
 import threading
 import time
 
