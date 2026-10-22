@@ -1,8 +1,33 @@
 # Jarvis, pacote 1: arquivos e memória local
 
-Data: 21/10/2026. Estado: proposto, aguardando revisão do Matheus.
+Data: 21/10/2026. Estado: proposto, revisado em 21/10/2026 com a visão ampliada do Matheus, aguardando revisão.
 Depende de: Fase 1 entregue (`2026-10-15-jarvis-design.md`). Os pacotes 2 a 4 (busca na
 web, escrita e `.docx`, agenda) ficam para specs próprios.
+
+## Revisão de 21/10/2026: visão do Matheus (prevalece sobre o resto)
+
+O Matheus ampliou o pedido. Onde este texto diz o contrário, vale esta seção.
+
+1. **Inventário exato.** A Jarvis sabe tudo o que existe nos PCs: todos os arquivos
+   (caminho, tamanho, datas, hash), apps instalados, dependências (pacotes de cada venv e
+   do npm, runtimes, drivers), serviços, tarefas agendadas e itens de inicialização.
+   Fica num banco local. O número exato vem da consulta; o modelo escolhe a consulta e
+   conta o resultado. Cada resposta cita a data da última varredura. O índice de conteúdo
+   (texto) deste spec é uma camada por cima.
+2. **Voz como canal principal**, com texto como reserva. Sobe da Fase 3 para a frente.
+   Comando que muda o PC: a Jarvis repete o comando exato e exige "confirmo"; um "sim"
+   solto não basta. Medir VRAM (Gemma 12b usa 8 GB de 12) com Whisper e voz juntos.
+3. **Construtor.** Pacote `construtor` separado, com permissão própria: cria e edita
+   arquivos e projetos numa pasta de trabalho, com plano e OK, testes antes de dar por
+   pronto e cópia do que sobrescreve. Apagar e formatar seguem bloqueados em código.
+   Isto substitui o "somente leitura" do pacote de arquivos, que passa a valer só para
+   o pacote `arq`.
+4. **Pesquisa quando o Matheus pedir**, nunca sozinha: dentro (inventário, arquivos,
+   drive, servidores, PC da Marcella) e fora (web). Nenhum dado do inventário sai na
+   consulta; resultado da web entra como dado, não como instrução.
+
+Ordem de construção: (1) inventário deste PC; (2) voz; (3) pesquisa na rede e na web;
+(4) construtor; (5) roteador com Claude, opcional.
 
 ## Objetivo
 
