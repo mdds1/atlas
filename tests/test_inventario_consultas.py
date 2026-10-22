@@ -235,6 +235,14 @@ class TestDuplicados(Base):
 
 
 class TestAppsEDependencias(Base):
+    def test_apps_busca_sem_acento(self):
+        vid = self.b.iniciar_varredura("sistema", AGORA - 5)
+        self.b.gravar("apps", vid, [{"origem": "r", "nome": "Gestão Fácil", "versao": "1", "editor": "", "local": ""}])
+        self.b.encerrar_varredura(vid, "ok", 0, AGORA - 4)
+        t = consultas.apps(self.b, nome="GESTAO facil")
+        self.assertIn("Gestão Fácil", t)
+        self.assertNotIn("APROXIMEI", t)
+
     def test_apps_aproxima(self):
         t = consultas.apps(self.b, nome="Olama")
         self.assertIn("APROXIMEI", t)
@@ -507,6 +515,34 @@ class TestSemAcentoEAproximacao(Base):
         r = [consultas.aproximar(b, "arquivos_ok", "a00150.txt") for _ in range(2)]
         self.assertEqual(r[0], r[1])
         self.assertEqual(r[0][0], "a00150.txt")
+
+    def test_nome_norm_gravado_em_arquivos_e_apps(self):
+        r = self.b.consultar("SELECT nome_norm FROM arquivos WHERE nome = 'Relatório Anual.docx'")
+        self.assertEqual(r[0]["nome_norm"], "relatorio anual.docx")
+        vid = self.b.iniciar_varredura("sistema", AGORA - 10)
+        self.b.gravar("apps", vid, [{"origem": "r", "nome": "Ação", "versao": "1", "editor": "", "local": ""}])
+        self.assertEqual(self.b.consultar("SELECT nome_norm FROM apps")[0]["nome_norm"], "acao")
+
+    def test_banco_antigo_sem_nome_norm_e_migrado(self):
+        import os, sqlite3, tempfile
+        d = tempfile.mkdtemp()
+        caminho = os.path.join(d, "velho.db")
+        con = sqlite3.connect(caminho)
+        con.executescript(
+            "CREATE TABLE varreduras (id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT NOT NULL, inicio REAL, fim REAL,"
+            " itens INTEGER DEFAULT 0, erros INTEGER DEFAULT 0, estado TEXT NOT NULL);"
+            "CREATE TABLE arquivos (caminho TEXT PRIMARY KEY, nome TEXT, ext TEXT, pasta TEXT, tamanho INTEGER,"
+            " modificado REAL, hash TEXT, varredura INTEGER NOT NULL, visto_ok INTEGER);"
+            "CREATE TABLE apps (origem TEXT, nome TEXT, versao TEXT, editor TEXT, local TEXT, varredura INTEGER NOT NULL);"
+            "INSERT INTO varreduras (tipo, inicio, fim, estado) VALUES ('arquivos', 1, 2, 'ok');"
+            "INSERT INTO arquivos VALUES ('C:\\D\\Relatório.docx', 'Relatório.docx', '.docx', 'C:\\D', 5, 1.0, NULL, 1, 1);"
+        )
+        con.commit()
+        con.close()
+        b = _Banco(caminho)
+        _ABERTOS.append(b)
+        self.assertEqual(b.consultar("SELECT nome_norm FROM arquivos")[0]["nome_norm"], "relatorio.docx")
+        self.assertIn("Relatório.docx", consultas.arquivos_buscar(b, nome="relatorio"))
 
     def test_funcao_sem_acento(self):
         from jarvis_pc.inventario.banco import sem_acento

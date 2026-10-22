@@ -28,11 +28,11 @@ CREATE TABLE IF NOT EXISTS varreduras (
   itens INTEGER DEFAULT 0, erros INTEGER DEFAULT 0, estado TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS arquivos (
   caminho TEXT PRIMARY KEY, nome TEXT, ext TEXT, pasta TEXT, tamanho INTEGER,
-  modificado REAL, hash TEXT, varredura INTEGER NOT NULL, visto_ok INTEGER);
+  modificado REAL, hash TEXT, varredura INTEGER NOT NULL, visto_ok INTEGER, nome_norm TEXT);
 CREATE INDEX IF NOT EXISTS ix_arquivos_nome ON arquivos(nome);
 CREATE INDEX IF NOT EXISTS ix_arquivos_ext ON arquivos(ext);
 CREATE INDEX IF NOT EXISTS ix_arquivos_tamanho ON arquivos(tamanho);
-CREATE TABLE IF NOT EXISTS apps (origem TEXT, nome TEXT, versao TEXT, editor TEXT, local TEXT, varredura INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS apps (origem TEXT, nome TEXT, versao TEXT, editor TEXT, local TEXT, varredura INTEGER NOT NULL, nome_norm TEXT);
 CREATE TABLE IF NOT EXISTS servicos (nome TEXT, exibicao TEXT, estado TEXT, inicio TEXT, varredura INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS tarefas (caminho TEXT, nome TEXT, estado TEXT, varredura INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS inicializacao (nome TEXT, comando TEXT, local TEXT, varredura INTEGER NOT NULL);
@@ -63,10 +63,10 @@ CREATE VIEW pacotes_ok AS SELECT * FROM pacotes
 """
 
 UPSERT_ARQUIVOS = """
-INSERT INTO arquivos (caminho, nome, ext, pasta, tamanho, modificado, varredura)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+INSERT INTO arquivos (caminho, nome, ext, pasta, tamanho, modificado, varredura, nome_norm)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(caminho) DO UPDATE SET
-  nome = excluded.nome, ext = excluded.ext, pasta = excluded.pasta,
+  nome = excluded.nome, nome_norm = excluded.nome_norm, ext = excluded.ext, pasta = excluded.pasta,
   hash = CASE WHEN arquivos.tamanho = excluded.tamanho AND arquivos.modificado = excluded.modificado
               THEN arquivos.hash ELSE NULL END,
   tamanho = excluded.tamanho, modificado = excluded.modificado, varredura = excluded.varredura
@@ -95,9 +95,23 @@ class Banco:
         self._trava = threading.RLock()
         with self._trava:
             self._con.executescript(ESQUEMA)
+            self._migrar_nome_norm()
             self._con.executescript(VIEWS)
             with self._con:
                 self._con.execute("UPDATE varreduras SET estado = 'falhou' WHERE estado = 'rodando'")
+
+    def _migrar_nome_norm(self):
+        """Banco de antes da coluna nome_norm: ALTER, preenche em Python e indexa."""
+        for tabela in ("arquivos", "apps"):
+            colunas = [r["name"] for r in self._con.execute(f"PRAGMA table_info({tabela})")]
+            if "nome_norm" not in colunas:
+                with self._con:
+                    self._con.execute(f"ALTER TABLE {tabela} ADD COLUMN nome_norm TEXT")
+                    linhas = self._con.execute(f"SELECT rowid, nome FROM {tabela}").fetchall()
+                    self._con.executemany(
+                        f"UPDATE {tabela} SET nome_norm = ? WHERE rowid = ?", [(sem_acento(r["nome"]), r["rowid"]) for r in linhas]
+                    )
+            self._con.execute(f"CREATE INDEX IF NOT EXISTS ix_{tabela}_nome_norm ON {tabela}(nome_norm)")
 
     def fechar(self):
         with self._trava:
@@ -117,13 +131,17 @@ class Banco:
             raise ValueError(f"tabela desconhecida: {tabela}")
         colunas = TABELAS[tabela]
         dados = [_linha(colunas, l) + (vid,) for l in linhas]
+        if tabela in ("arquivos", "apps"):
+            i = colunas.index("nome")
+            dados = [d + (sem_acento(d[i]),) for d in dados]
         with self._trava, self._con:
             if tabela == "arquivos":
                 self._con.executemany(UPSERT_ARQUIVOS, dados)
             else:
-                marcas = ", ".join("?" for _ in range(len(colunas) + 1))
+                extra = ", nome_norm" if tabela == "apps" else ""
+                marcas = ", ".join("?" for _ in range(len(dados[0]) if dados else len(colunas) + 1))
                 self._con.executemany(
-                    f"INSERT INTO {tabela} ({', '.join(colunas)}, varredura) VALUES ({marcas})", dados
+                    f"INSERT INTO {tabela} ({', '.join(colunas)}, varredura{extra}) VALUES ({marcas})", dados
                 )
 
     def progresso(self, vid, itens):

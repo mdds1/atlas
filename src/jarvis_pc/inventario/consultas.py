@@ -107,8 +107,8 @@ def aproximar(banco, tabela, nome, limite=5):
         return []
     linhas = banco.consultar(
         f"SELECT DISTINCT nome FROM {tabela} WHERE length(nome) BETWEEN ? AND ? "
-        "AND sem_acento(substr(nome, 1, 1)) = ? ORDER BY nome LIMIT 20000",
-        [len(alvo) - 2, len(alvo) + 2, alvo[0]],
+        "AND nome_norm >= ? AND nome_norm < ? ORDER BY nome LIMIT 20000",
+        [len(alvo) - 2, len(alvo) + 2, alvo[0], chr(ord(alvo[0]) + 1)],
     )
     mapa = {sem_acento(r["nome"]): r["nome"] for r in linhas}
     return [mapa[c] for c in difflib.get_close_matches(alvo, list(mapa), n=limite, cutoff=0.75)]
@@ -127,7 +127,7 @@ def arquivos_buscar(banco, nome="", extensao="", pasta="", minimo_mb=0.0, limite
         return cab
     onde, params = [], []
     if nome:
-        onde.append(f"sem_acento(nome) LIKE ? ESCAPE '{ESCAPE}'")
+        onde.append(f"nome_norm LIKE ? ESCAPE '{ESCAPE}'")
         params.append(_like(sem_acento(nome)))
     if extensao:
         e = str(extensao).strip().lower()
@@ -288,7 +288,7 @@ def apps(banco, nome="", limite=30, agora=time.time):
         return cab
     onde, params = "", []
     if nome:
-        onde = f" WHERE sem_acento(nome) LIKE ? ESCAPE '{ESCAPE}'"
+        onde = f" WHERE nome_norm LIKE ? ESCAPE '{ESCAPE}'"
         params.append(_like(sem_acento(nome)))
     total = banco.consultar(f"SELECT COUNT(*) AS n FROM apps_ok{onde}", params)[0]["n"]
     if not total:
