@@ -1,6 +1,6 @@
 # Jarvis do PC: design
 
-Data: 15/10/2026, revisado em 19/10/2026. Estado: proposto, aguardando revisão do Matheus.
+Data: 15/10/2026, revisado em 19/10/2026. Estado: Fase 1 entregue com ressalvas em 21/10/2026 (ver "Estado da Fase 1"); fases 2 a 4 propostas.
 
 ## Objetivo
 
@@ -178,3 +178,26 @@ Pontos em aberto, só necessários quando o pacote for desenhado: qual agenda o 
 - O custo real da API do Claude por diagnóstico não foi medido; será medido na Fase 2,
   com limite mensal configurado antes do primeiro uso.
 - O OpenJarvis muda todo dia; atualizações só com reteste contra os cenários.
+
+## Estado da Fase 1 (21/10/2026)
+
+**Entregue com ressalvas.** O Matheus aceitou a fase em 21/10/2026 por declaração
+("aceito, pode continuar"). O roteiro de aceitação de 10 itens da Tarefa 11 **não foi
+percorrido item a item com ele olhando a janela**; o que consta abaixo é o que foi
+conferido de fato.
+
+Conferido:
+- Desinstalação: recusa uma pasta que não é da Jarvis (nada apagado) e remove só a
+  pasta de teste com marcador `iniciar.bat`. Testado em 21/10/2026 no PC.
+- Instalação em `C:\Jarvis`, Ollama com o `gemma4:12b-it-q4_K_M` e o `iniciar.bat` que
+  sobe o servidor sozinho quando preciso (registro-de-instalacao.md).
+- Cenários de agente: 12b 24 de 24, e4b 20 de 24 (medicoes-fase-1.md). Inclui comandos
+  bloqueados pela trava.
+- `registro.jsonl` existe e recebe eventos (12 linhas na data da aceitação).
+
+Não conferido com o Matheus na tela (itens do roteiro 1, 2, 5, 6, 8 e 9): atalho
+Ctrl+Alt+J e Esc, janelas de Sim e Não, mensagem com o Ollama fechado e o encerramento
+do processo. Ficam como ressalva até ele usar a janela.
+
+Decisões das medições: modelo padrão `gemma4:12b-it-q4_K_M` (8,0 GB); o `e4b` fica como
+alternativa leve. Iniciar com o Windows: não pedido, fora desta fase.
