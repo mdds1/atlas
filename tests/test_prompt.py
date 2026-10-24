@@ -63,3 +63,17 @@ class TestPromptAgirSemConfirmarNoTexto(unittest.TestCase):
         for trecho in ("administrador", "não invente instrução"):
             with self.subTest(trecho=trecho):
                 self.assertIn(trecho, SYSTEM_PROMPT)
+
+
+class TestPromptExemplos(unittest.TestCase):
+    def test_exemplo_de_lembrar_exige_chamar_a_ferramenta(self):
+        self.assertIn('"Lembre que', SYSTEM_PROMPT)
+        self.assertIn("sem chamar a ferramenta", SYSTEM_PROMPT)
+        self.assertIn("Telegram", SYSTEM_PROMPT)
+
+    def test_exemplo_de_duas_pastas_lista_numerado_e_pergunta(self):
+        self.assertIn("Achei 2: 1)", SYSTEM_PROMPT)
+        self.assertIn("Qual?", SYSTEM_PROMPT)
+
+    def test_prompt_nao_inchou(self):
+        self.assertLessEqual(len(SYSTEM_PROMPT.splitlines()), 22)
