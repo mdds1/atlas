@@ -6,6 +6,7 @@ from pathlib import Path
 
 from jarvis_pc.agente import criar_agente
 from jarvis_pc.config import carregar
+from jarvis_pc.instancia import travar
 from jarvis_pc.inventario.ferramentas import montar_inventario
 from jarvis_pc.memoria import Memoria
 from jarvis_pc.permissoes import Permissoes
@@ -54,9 +55,14 @@ def main(argv):
     registro = None
     atualizador = None
     banco = None
+    trava = None
     try:
         config = carregar(pasta / "config.json")
         registro = Registro(pasta / config.registro)
+        trava = travar(pasta)
+        if trava is None:
+            registro.evento("ja_aberta")
+            return 0
         ponte = PonteConfirmacao(config.tempo_confirmacao)
         extras, atualizador, banco = montar_inventario(pasta, config)
         agente = criar_agente(
@@ -83,6 +89,8 @@ def main(argv):
         _falha_de_partida(pasta, erro, registro)
         return 1
     finally:
+        if trava is not None:
+            trava.liberar()
         if atualizador is not None:
             atualizador.cancelar()
         if banco is not None:
