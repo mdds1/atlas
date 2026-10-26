@@ -235,6 +235,19 @@ class TestDuplicados(Base):
 
 
 class TestAppsEDependencias(Base):
+    def test_apps_busca_sem_acento(self):
+        vid = self.b.iniciar_varredura("sistema", AGORA - 5)
+        self.b.gravar("apps", vid, [{"origem": "r", "nome": "Gestão Fácil", "versao": "1", "editor": "", "local": ""}])
+        self.b.encerrar_varredura(vid, "ok", 0, AGORA - 4)
+        t = consultas.apps(self.b, nome="GESTAO facil")
+        self.assertIn("Gestão Fácil", t)
+        self.assertNotIn("APROXIMEI", t)
+
+    def test_apps_aproxima(self):
+        t = consultas.apps(self.b, nome="Olama")
+        self.assertIn("APROXIMEI", t)
+        self.assertIn("Ollama", t)
+
     def setUp(self):
         self.b = Banco()
         vid = self.b.iniciar_varredura("sistema", AGORA - 60)
@@ -455,3 +468,83 @@ class TestDuplicadosRobustos(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestSemAcentoEAproximacao(Base):
+    def setUp(self):
+        self.b = banco_com_arquivos(
+            [
+                arq("C:\\Docs\\Relatório Anual.docx", 10),
+                arq("C:\\Docs\\orcamento.xlsx", 20),
+                arq("C:\\Jarvis\\instalar.ps1", 30),
+            ]
+        )
+
+    def test_sem_acento_e_sem_maiuscula(self):
+        t = consultas.arquivos_buscar(self.b, nome="RELATORIO")
+        self.assertIn("C:\\Docs\\Relatório Anual.docx", t)
+        self.assertNotIn("APROXIMEI", t)
+        self.assertIn("C:\\Docs\\orcamento.xlsx", consultas.arquivos_buscar(self.b, nome="orçamento"))
+
+    def test_aproxima_so_quando_a_exata_nao_acha_e_avisa(self):
+        t = consultas.arquivos_buscar(self.b, nome="instalr.ps1")
+        self.assertIn("APROXIMEI", t)
+        self.assertIn("instalar.ps1", t)
+
+    def test_sem_parecido_continua_nao_achei(self):
+        t = consultas.arquivos_buscar(self.b, nome="zzzzzz")
+        self.assertIn("Não achei nenhum arquivo", t)
+        self.assertNotIn("APROXIMEI", t)
+
+    def test_mesma_inicial_e_tamanho_mas_distante_nao_aproxima(self):
+        t = consultas.arquivos_buscar(self.b, nome="oxxxxxxxxxxxx")
+        self.assertNotIn("APROXIMEI", t)
+        self.assertIn("Não achei nenhum arquivo", t)
+
+    def test_aproximacao_nunca_devolve_arquivo_fora_da_varredura_ok(self):
+        vid = self.b.iniciar_varredura("arquivos", AGORA - 10)
+        self.b.gravar("arquivos", vid, [arq("C:\\Segredo\\orcamento2.xlsx", 5)])
+        t = consultas.arquivos_buscar(self.b, nome="orcamnto2.xlsx")
+        self.assertNotIn("orcamento2", t)
+        self.assertNotIn("Segredo", t)
+        self.assertEqual(consultas.aproximar(self.b, "arquivos_ok", "orcamnto2.xlsx"), ["orcamento.xlsx"])
+
+    def test_aproximacao_e_deterministica_com_muitos_candidatos(self):
+        linhas = [arq("C:\\L\\a%05d.txt" % i, 1) for i in range(300)]
+        b = banco_com_arquivos(linhas)
+        r = [consultas.aproximar(b, "arquivos_ok", "a00150.txt") for _ in range(2)]
+        self.assertEqual(r[0], r[1])
+        self.assertEqual(r[0][0], "a00150.txt")
+
+    def test_nome_norm_gravado_em_arquivos_e_apps(self):
+        r = self.b.consultar("SELECT nome_norm FROM arquivos WHERE nome = 'Relatório Anual.docx'")
+        self.assertEqual(r[0]["nome_norm"], "relatorio anual.docx")
+        vid = self.b.iniciar_varredura("sistema", AGORA - 10)
+        self.b.gravar("apps", vid, [{"origem": "r", "nome": "Ação", "versao": "1", "editor": "", "local": ""}])
+        self.assertEqual(self.b.consultar("SELECT nome_norm FROM apps")[0]["nome_norm"], "acao")
+
+    def test_banco_antigo_sem_nome_norm_e_migrado(self):
+        import os, sqlite3, tempfile
+        d = tempfile.mkdtemp()
+        caminho = os.path.join(d, "velho.db")
+        con = sqlite3.connect(caminho)
+        con.executescript(
+            "CREATE TABLE varreduras (id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT NOT NULL, inicio REAL, fim REAL,"
+            " itens INTEGER DEFAULT 0, erros INTEGER DEFAULT 0, estado TEXT NOT NULL);"
+            "CREATE TABLE arquivos (caminho TEXT PRIMARY KEY, nome TEXT, ext TEXT, pasta TEXT, tamanho INTEGER,"
+            " modificado REAL, hash TEXT, varredura INTEGER NOT NULL, visto_ok INTEGER);"
+            "CREATE TABLE apps (origem TEXT, nome TEXT, versao TEXT, editor TEXT, local TEXT, varredura INTEGER NOT NULL);"
+            "INSERT INTO varreduras (tipo, inicio, fim, estado) VALUES ('arquivos', 1, 2, 'ok');"
+            "INSERT INTO arquivos VALUES ('C:\\D\\Relatório.docx', 'Relatório.docx', '.docx', 'C:\\D', 5, 1.0, NULL, 1, 1);"
+        )
+        con.commit()
+        con.close()
+        b = _Banco(caminho)
+        _ABERTOS.append(b)
+        self.assertEqual(b.consultar("SELECT nome_norm FROM arquivos")[0]["nome_norm"], "relatorio.docx")
+        self.assertIn("Relatório.docx", consultas.arquivos_buscar(b, nome="relatorio"))
+
+    def test_funcao_sem_acento(self):
+        from jarvis_pc.inventario.banco import sem_acento
+        self.assertEqual(sem_acento("Ação É"), "acao e")
+        self.assertIsNone(sem_acento(None))

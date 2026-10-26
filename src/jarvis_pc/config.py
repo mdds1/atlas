@@ -10,10 +10,14 @@ class Config:
     host: str = "http://localhost:11434"
     registro: str = "registro.jsonl"
     tecla: str = "J"
-    tempo_confirmacao: float = 120.0
+    tempo_confirmacao: float = 300.0
     inventario: str = "inventario.db"
     raizes: tuple = ("C:\\", "E:\\")
     atualizar_ao_abrir: bool = True
+    conversas: str = "conversas"
+    memoria: str = "memoria.json"
+    permissoes: str = "permissoes.json"
+    max_passos: int = 30
 
 
 def carregar(caminho):
@@ -36,7 +40,7 @@ def _validar(config, caminho):
     def erro(explicacao):
         return ValueError(f"config inválida em {caminho}: {explicacao}")
 
-    for campo in ("modelo", "host", "registro", "inventario"):
+    for campo in ("modelo", "host", "registro", "inventario", "conversas", "memoria", "permissoes"):
         valor = getattr(config, campo)
         if not isinstance(valor, str) or not valor.strip():
             raise erro(f"{campo} deve ser um texto não vazio")
@@ -55,4 +59,7 @@ def _validar(config, caminho):
         raise erro("raizes deve ser uma lista não vazia de textos (por exemplo, [\"C:\\\\\", \"E:\\\\\"])")
     if not isinstance(config.atualizar_ao_abrir, bool):
         raise erro("atualizar_ao_abrir deve ser verdadeiro ou falso")
+    passos = config.max_passos
+    if isinstance(passos, bool) or not isinstance(passos, int) or not 1 <= passos <= 100:
+        raise erro("max_passos deve ser um número inteiro de 1 a 100")
     return replace(config, tecla=tecla.upper(), raizes=tuple(raizes))

@@ -3,10 +3,12 @@
 Toda resposta começa com a data da varredura que a originou. Os textos são
 curtos de propósito: o modelo local lê o que couber no contexto.
 """
+import difflib
 import hashlib
 import time
 from datetime import datetime
 
+from jarvis_pc.inventario.banco import sem_acento
 from jarvis_pc.inventario.exclusoes import normalizar
 
 ESCAPE = "!"
@@ -98,14 +100,35 @@ def status(banco, agora=time.time):
     return "\n".join(linhas)
 
 
+def aproximar(banco, tabela, nome, limite=5):
+    """Nomes parecidos (erro de digitação). Só chamar quando a busca exata não achou nada."""
+    alvo = sem_acento(nome).strip()
+    if len(alvo) < 3:
+        return []
+    linhas = banco.consultar(
+        f"SELECT DISTINCT nome FROM {tabela} WHERE length(nome) BETWEEN ? AND ? "
+        "AND nome_norm >= ? AND nome_norm < ? ORDER BY nome LIMIT 20000",
+        [len(alvo) - 2, len(alvo) + 2, alvo[0], chr(ord(alvo[0]) + 1)],
+    )
+    mapa = {sem_acento(r["nome"]): r["nome"] for r in linhas}
+    return [mapa[c] for c in difflib.get_close_matches(alvo, list(mapa), n=limite, cutoff=0.75)]
+
+
+def _aviso_aproximado(nome, parecidos):
+    return (
+        f"Não achei {nome!r} exato. APROXIMEI por nome parecido (confira com o Matheus antes de usar): "
+        + ", ".join(parecidos)
+    )
+
+
 def arquivos_buscar(banco, nome="", extensao="", pasta="", minimo_mb=0.0, limite=20, agora=time.time):
     u, cab = _cabecalho(banco, "arquivos", "arquivos", agora)
     if not u:
         return cab
     onde, params = [], []
     if nome:
-        onde.append(f"nome LIKE ? ESCAPE '{ESCAPE}'")
-        params.append(_like(nome))
+        onde.append(f"nome_norm LIKE ? ESCAPE '{ESCAPE}'")
+        params.append(_like(sem_acento(nome)))
     if extensao:
         e = str(extensao).strip().lower()
         params.append(e if e.startswith(".") else "." + e)
@@ -123,6 +146,9 @@ def arquivos_buscar(banco, nome="", extensao="", pasta="", minimo_mb=0.0, limite
     clausula = (" WHERE " + " AND ".join(onde)) if onde else ""
     total = banco.consultar(f"SELECT COUNT(*) AS n FROM arquivos_ok{clausula}", params)[0]["n"]
     if not total:
+        parecidos = aproximar(banco, "arquivos_ok", nome) if nome else []
+        if parecidos:
+            return f"{cab}\n{_aviso_aproximado(nome, parecidos)}"
         return f"{cab}\nNão achei nenhum arquivo com esses filtros."
     n = _limite(limite, 20)
     linhas = banco.consultar(
@@ -262,10 +288,13 @@ def apps(banco, nome="", limite=30, agora=time.time):
         return cab
     onde, params = "", []
     if nome:
-        onde = f" WHERE nome LIKE ? ESCAPE '{ESCAPE}'"
-        params.append(_like(nome))
+        onde = f" WHERE nome_norm LIKE ? ESCAPE '{ESCAPE}'"
+        params.append(_like(sem_acento(nome)))
     total = banco.consultar(f"SELECT COUNT(*) AS n FROM apps_ok{onde}", params)[0]["n"]
     if not total:
+        parecidos = aproximar(banco, "apps_ok", nome) if nome else []
+        if parecidos:
+            return f"{cab}\n{_aviso_aproximado(nome, parecidos)}"
         return f"{cab}\nNão achei nenhum app com esse nome."
     linhas = banco.consultar(
         f"SELECT origem, nome, versao, editor FROM apps_ok{onde} ORDER BY nome COLLATE NOCASE LIMIT ?", params + [_limite(limite, 30)]

@@ -1,4 +1,8 @@
+import sqlite3
+import tempfile
 import unittest
+from pathlib import Path
+from unittest import mock
 
 from jarvis_pc.inventario.banco import Banco, TABELAS
 
@@ -192,3 +196,82 @@ class TestBanco(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def _banco_antigo(caminho, com_coluna=False):
+    c = sqlite3.connect(str(caminho))
+    c.executescript(
+        "CREATE TABLE varreduras (id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT NOT NULL, inicio REAL, fim REAL,"
+        " itens INTEGER DEFAULT 0, erros INTEGER DEFAULT 0, estado TEXT NOT NULL);"
+        "CREATE TABLE arquivos (caminho TEXT PRIMARY KEY, nome TEXT, ext TEXT, pasta TEXT, tamanho INTEGER,"
+        " modificado REAL, hash TEXT, varredura INTEGER NOT NULL, visto_ok INTEGER);"
+        "CREATE TABLE apps (origem TEXT, nome TEXT, versao TEXT, editor TEXT, local TEXT, varredura INTEGER NOT NULL);"
+    )
+    if com_coluna:
+        c.execute("ALTER TABLE arquivos ADD COLUMN nome_norm TEXT")
+    c.executemany(
+        "INSERT INTO arquivos (caminho, nome, varredura) VALUES (?, ?, 1)",
+        [(f"C:\\a{i}", f"Ação {i}") for i in range(10)],
+    )
+    c.commit()
+    c.close()
+
+
+def _contagem(caminho):
+    c = sqlite3.connect(str(caminho))
+    try:
+        return c.execute("SELECT COUNT(*), COUNT(nome_norm) FROM arquivos").fetchone()
+    finally:
+        c.close()
+
+
+class TestMigracaoNomeNorm(unittest.TestCase):
+    def test_falha_no_meio_e_recuperavel_ao_reabrir(self):
+        from jarvis_pc.inventario import banco as modulo
+
+        with tempfile.TemporaryDirectory() as t:
+            caminho = Path(t) / "inv.db"
+            _banco_antigo(caminho)
+            original, n = modulo.sem_acento, [0]
+
+            def bomba(texto):
+                n[0] += 1
+                if n[0] == 5:
+                    raise RuntimeError("queda")
+                return original(texto)
+
+            with mock.patch.object(modulo, "sem_acento", bomba):
+                with self.assertRaises(RuntimeError):
+                    Banco(caminho)
+            c = sqlite3.connect(str(caminho))
+            colunas = [r[1] for r in c.execute("PRAGMA table_info(arquivos)")]
+            c.close()
+            self.assertNotIn("nome_norm", colunas)
+            b = Banco(caminho)
+            self.addCleanup(b.fechar)
+            self.assertEqual(_contagem(caminho), (10, 10))
+            self.assertEqual(b.consultar("SELECT nome_norm FROM arquivos WHERE nome = 'Ação 1'")[0]["nome_norm"], "acao 1")
+
+    def test_coluna_existente_e_vazia_e_preenchida(self):
+        with tempfile.TemporaryDirectory() as t:
+            caminho = Path(t) / "inv.db"
+            _banco_antigo(caminho, com_coluna=True)
+            self.assertEqual(_contagem(caminho), (10, 0))
+            b = Banco(caminho)
+            self.addCleanup(b.fechar)
+            self.assertEqual(_contagem(caminho), (10, 10))
+
+    def test_registra_a_duracao_da_migracao(self):
+        with tempfile.TemporaryDirectory() as t:
+            caminho = Path(t) / "inv.db"
+            _banco_antigo(caminho)
+            with self.assertLogs("jarvis_pc.inventario.banco", level="INFO") as g:
+                b = Banco(caminho)
+            self.addCleanup(b.fechar)
+            self.assertTrue(any("nome_norm" in m and "arquivos" in m and "10" in m for m in g.output))
+            self.assertGreaterEqual(b.migracao_segundos, 0.0)
+
+    def test_banco_novo_nao_registra_migracao(self):
+        b = Banco()
+        self.addCleanup(b.fechar)
+        self.assertEqual(b.migracao_segundos, 0.0)

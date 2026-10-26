@@ -4,8 +4,13 @@ Cada coleta grava as linhas novas com o número da sua varredura. Só quando ela
 termina bem (estado "ok") as linhas de varreduras antigas do mesmo tipo são
 apagadas; uma coleta cancelada ou que falhou não destrói o que já existia.
 """
+import logging
 import sqlite3
 import threading
+import time
+import unicodedata
+
+LOG = logging.getLogger(__name__)
 
 TABELAS = {
     "arquivos": ("caminho", "nome", "ext", "pasta", "tamanho", "modificado"),
@@ -27,11 +32,11 @@ CREATE TABLE IF NOT EXISTS varreduras (
   itens INTEGER DEFAULT 0, erros INTEGER DEFAULT 0, estado TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS arquivos (
   caminho TEXT PRIMARY KEY, nome TEXT, ext TEXT, pasta TEXT, tamanho INTEGER,
-  modificado REAL, hash TEXT, varredura INTEGER NOT NULL, visto_ok INTEGER);
+  modificado REAL, hash TEXT, varredura INTEGER NOT NULL, visto_ok INTEGER, nome_norm TEXT);
 CREATE INDEX IF NOT EXISTS ix_arquivos_nome ON arquivos(nome);
 CREATE INDEX IF NOT EXISTS ix_arquivos_ext ON arquivos(ext);
 CREATE INDEX IF NOT EXISTS ix_arquivos_tamanho ON arquivos(tamanho);
-CREATE TABLE IF NOT EXISTS apps (origem TEXT, nome TEXT, versao TEXT, editor TEXT, local TEXT, varredura INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS apps (origem TEXT, nome TEXT, versao TEXT, editor TEXT, local TEXT, varredura INTEGER NOT NULL, nome_norm TEXT);
 CREATE TABLE IF NOT EXISTS servicos (nome TEXT, exibicao TEXT, estado TEXT, inicio TEXT, varredura INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS tarefas (caminho TEXT, nome TEXT, estado TEXT, varredura INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS inicializacao (nome TEXT, comando TEXT, local TEXT, varredura INTEGER NOT NULL);
@@ -62,10 +67,10 @@ CREATE VIEW pacotes_ok AS SELECT * FROM pacotes
 """
 
 UPSERT_ARQUIVOS = """
-INSERT INTO arquivos (caminho, nome, ext, pasta, tamanho, modificado, varredura)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+INSERT INTO arquivos (caminho, nome, ext, pasta, tamanho, modificado, varredura, nome_norm)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(caminho) DO UPDATE SET
-  nome = excluded.nome, ext = excluded.ext, pasta = excluded.pasta,
+  nome = excluded.nome, nome_norm = excluded.nome_norm, ext = excluded.ext, pasta = excluded.pasta,
   hash = CASE WHEN arquivos.tamanho = excluded.tamanho AND arquivos.modificado = excluded.modificado
               THEN arquivos.hash ELSE NULL END,
   tamanho = excluded.tamanho, modificado = excluded.modificado, varredura = excluded.varredura
@@ -78,16 +83,59 @@ def _linha(colunas, linha):
     return tuple(linha)
 
 
+def sem_acento(texto):
+    """Forma de comparação: sem acento e sem maiúscula. Registrada no SQLite."""
+    if texto is None:
+        return None
+    t = unicodedata.normalize("NFKD", str(texto))
+    return "".join(c for c in t if not unicodedata.combining(c)).casefold()
+
+
 class Banco:
     def __init__(self, caminho=":memory:"):
         self._con = sqlite3.connect(str(caminho), check_same_thread=False)
         self._con.row_factory = sqlite3.Row
+        self._con.create_function("sem_acento", 1, sem_acento, deterministic=True)
         self._trava = threading.RLock()
         with self._trava:
             self._con.executescript(ESQUEMA)
+            self._migrar_nome_norm()
             self._con.executescript(VIEWS)
             with self._con:
                 self._con.execute("UPDATE varreduras SET estado = 'falhou' WHERE estado = 'rodando'")
+
+    def _migrar_nome_norm(self):
+        """Banco de antes da coluna nome_norm: ALTER e preenchimento numa transação só.
+
+        Preenche sempre que sobrar linha com nome e sem nome_norm, não só quando a
+        coluna falta: assim uma migração interrompida se completa na próxima abertura.
+        """
+        inicio = time.perf_counter()
+        migrou = False
+        for tabela in ("arquivos", "apps"):
+            self._con.commit()
+            self._con.execute("BEGIN")
+            try:
+                colunas = [r["name"] for r in self._con.execute(f"PRAGMA table_info({tabela})")]
+                if "nome_norm" not in colunas:
+                    self._con.execute(f"ALTER TABLE {tabela} ADD COLUMN nome_norm TEXT")
+                linhas = self._con.execute(
+                    f"SELECT rowid, nome FROM {tabela} WHERE nome_norm IS NULL AND nome IS NOT NULL"
+                ).fetchall()
+                self._con.executemany(
+                    f"UPDATE {tabela} SET nome_norm = ? WHERE rowid = ?", [(sem_acento(r["nome"]), r["rowid"]) for r in linhas]
+                )
+                self._con.commit()
+            except BaseException:
+                self._con.rollback()
+                raise
+            if linhas:
+                migrou = True
+                LOG.info("migração nome_norm: %d linhas de %s", len(linhas), tabela)
+            self._con.execute(f"CREATE INDEX IF NOT EXISTS ix_{tabela}_nome_norm ON {tabela}(nome_norm)")
+        self.migracao_segundos = time.perf_counter() - inicio if migrou else 0.0
+        if migrou:
+            LOG.info("migração nome_norm concluída em %.2f s", self.migracao_segundos)
 
     def fechar(self):
         with self._trava:
@@ -107,13 +155,17 @@ class Banco:
             raise ValueError(f"tabela desconhecida: {tabela}")
         colunas = TABELAS[tabela]
         dados = [_linha(colunas, l) + (vid,) for l in linhas]
+        if tabela in ("arquivos", "apps"):
+            i = colunas.index("nome")
+            dados = [d + (sem_acento(d[i]),) for d in dados]
         with self._trava, self._con:
             if tabela == "arquivos":
                 self._con.executemany(UPSERT_ARQUIVOS, dados)
             else:
-                marcas = ", ".join("?" for _ in range(len(colunas) + 1))
+                extra = ", nome_norm" if tabela == "apps" else ""
+                marcas = ", ".join("?" for _ in range(len(dados[0]) if dados else len(colunas) + 1))
                 self._con.executemany(
-                    f"INSERT INTO {tabela} ({', '.join(colunas)}, varredura) VALUES ({marcas})", dados
+                    f"INSERT INTO {tabela} ({', '.join(colunas)}, varredura{extra}) VALUES ({marcas})", dados
                 )
 
     def progresso(self, vid, itens):

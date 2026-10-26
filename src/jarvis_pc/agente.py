@@ -1,13 +1,23 @@
-"""Monta o agente: ferramentas de leitura, comando travado e confirmação."""
+"""Monta a Atlas: ferramentas, permissões, pedido de OK, memória, sessão e registro sobre o laço próprio."""
 import unicodedata
 
-from openjarvis.agents.orchestrator import OrchestratorAgent
+from openjarvis.core.types import Message, Role
 
 from jarvis_pc.comando import ComandoPcTool
+from jarvis_pc.laco import rodar_laco
 from jarvis_pc.leitura import criar_ferramentas_leitura
+from jarvis_pc.memoria import Memoria, criar_ferramentas_memoria
+from jarvis_pc.permissoes import AGIR, NIVEIS, Permissoes, alvo_de, nivel_de
+from jarvis_pc.ponte import NAO, SIM, SIM_SEMPRE
 from jarvis_pc.prompt import SYSTEM_PROMPT
 from jarvis_pc.ps import executar_powershell
-from jarvis_pc.trava import avaliar
+from jarvis_pc.sessao import Sessao
+
+
+def _limpo(texto, limite=300):
+    t = "".join(" " if unicodedata.category(c) in ("Cc", "Cf") else c for c in str(texto or ""))
+    t = " ".join(t.split())
+    return t[:limite] + "..." if len(t) > limite else t
 
 
 def montar_texto_confirmacao(pendente, texto_padrao):
@@ -15,79 +25,126 @@ def montar_texto_confirmacao(pendente, texto_padrao):
     comando = pendente.get("comando")
     if not isinstance(comando, str) or not comando.strip():
         return texto_padrao
-    motivo = str(pendente.get("motivo") or "")
-    motivo = "".join(" " if unicodedata.category(c) in ("Cc", "Cf") else c for c in motivo)
-    motivo = " ".join(motivo.split())
-    if len(motivo) > 300:
-        motivo = motivo[:300] + "..."
-    motivo = motivo or "nao informado"
-    return (
-        "A Jarvis quer executar este comando no seu PC:\n\n"
-        + comando
-        + "\n\nMotivo: "
-        + motivo
-        + "\n\nPermitir?"
-    )
+    motivo = _limpo(pendente.get("motivo")) or "nao informado"
+    return "A Atlas quer executar este comando no seu PC:\n\n" + comando + "\n\nMotivo: " + motivo + "\n\nPermitir?"
+
+
+def texto_ok(nome, argumentos):
+    padrao = f"A Atlas quer usar {nome} com:\n\n{alvo_de(nome, argumentos)}\n\nPermitir?"
+    if nome == "pc_comando":
+        return montar_texto_confirmacao(argumentos, padrao)
+    return padrao
+
+
+class Agente:
+    def __init__(self, *, engine, modelo, ferramentas, confirmar, registro, permissoes, memoria, sessao, max_passos):
+        self.engine, self.modelo, self.ferramentas = engine, modelo, ferramentas
+        self.confirmar, self.registro = confirmar, registro
+        self.permissoes, self.memoria, self.sessao = permissoes, memoria, sessao
+        self.max_passos = max_passos
+        self._avisos = []
+
+    def _mensagens(self, texto):
+        sistema = SYSTEM_PROMPT
+        fatos = self.memoria.para_prompt()
+        if fatos:
+            sistema += "\n" + fatos + "\n"
+        msgs = [Message(role=Role.SYSTEM, content=sistema)]
+        for papel, t in self.sessao.historico():
+            msgs.append(Message(role=Role.USER if papel == "usuario" else Role.ASSISTANT, content=t))
+        msgs.append(Message(role=Role.USER, content=texto))
+        return msgs
+
+    def _autorizador(self, origem):
+        def autorizar(nome, argumentos):
+            d = self.permissoes.decidir(nome, argumentos)
+
+            def registrar(permitido, regra):
+                self.registro.evento(
+                    "chamada", ferramenta=nome, argumentos=argumentos, nivel=d.nivel,
+                    permitido=permitido, regra=regra, origem=origem, motivo=d.motivo,
+                )
+
+            if d.acao == "recusar":
+                registrar(False, "")
+                return "recusar", f"BLOQUEADO: {d.motivo}. Não tente outro caminho; explique ao Matheus."
+            if d.acao == "rodar":
+                registrar(True, d.regra or "leitura")
+                return "rodar", ""
+            pedido = texto_ok(nome, argumentos)
+            try:
+                resposta = self.confirmar(pedido, origem == "janela")
+            except Exception:
+                resposta = NAO
+            if resposta not in (SIM, SIM_SEMPRE) or (resposta == SIM_SEMPRE and origem != "janela"):
+                resposta = NAO
+            self.registro.evento("confirmacao", pedido=pedido, resposta=resposta, origem=origem)
+            regra = "ok desta vez"
+            if resposta == SIM_SEMPRE:
+                try:
+                    regra = self.permissoes.gravar_regra(nome, argumentos, origem)
+                    self.registro.evento("regra_nova", regra=regra, origem=origem)
+                except ValueError as e:
+                    self.registro.evento("erro", classe="ValueError", mensagem=f"regra não gravada: {e}")
+                    self._avisos.append(f"Executei só desta vez; a regra não foi gravada porque {e}.")
+            registrar(resposta != NAO, regra if resposta != NAO else "")
+            if resposta == NAO:
+                return "parar", (
+                    f"Não fiz: você disse Não (ou não respondeu) para {nome}: {alvo_de(nome, argumentos)}. "
+                    "Não vou tentar outro caminho. O que prefere fazer?"
+                )
+            return "rodar", ""
+        return autorizar
+
+    def perguntar(self, texto, origem="janela"):
+        origem = origem if origem == "janela" else "telegram"
+        self.registro.evento("pergunta", texto=texto, origem=origem)
+        self._avisos = []
+        try:
+            r = rodar_laco(
+                self.engine, self.modelo, self._mensagens(texto), self.ferramentas,
+                self._autorizador(origem), lambda n: nivel_de(n) == AGIR,
+                max_passos=self.max_passos,
+                ao_resultado=lambda n, res: self.registro.evento(
+                    "resultado", ferramenta=n, sucesso=bool(res.success), tamanho=len(res.content or "")
+                ),
+            )
+        except Exception as erro:
+            self.registro.evento("erro", classe=type(erro).__name__, mensagem=str(erro))
+            raise
+        texto_final = "\n\n".join([r.texto, *self._avisos]) if self._avisos else r.texto
+        self._avisos = []
+        self.sessao.acrescentar("usuario", texto, origem)
+        self.sessao.acrescentar("atlas", texto_final, origem)
+        self.registro.evento("resposta", texto=texto_final, parou=r.parou, passos=len(r.passos))
+        return texto_final
 
 
 def criar_agente(
-    *, modelo, confirmar, registro, executor=executar_powershell, engine=None, host=None, max_turns=8, extras=()
+    *, modelo, confirmar, registro, executor=executar_powershell, engine=None, host=None,
+    max_passos=30, extras=(), permissoes=None, memoria=None, sessao=None,
 ):
-    """Cria o agente. `confirmar(texto) -> bool` é obrigatório: sem ele, nada executa."""
+    """Cria a Atlas. `confirmar(texto, pode_sempre) -> "sim" | "sim_sempre" | "nao"` é obrigatório."""
     if not callable(confirmar):
-        raise ValueError("confirmar é obrigatório: sem ele a Jarvis não executa nada")
-    ferramentas = criar_ferramentas_leitura(executor) + [ComandoPcTool(executor)] + list(extras)
-    conhecidas = {f.spec.name for f in ferramentas}
-    pendente = {}
-
-    def antes(nome, argumentos):
-        permitido = nome in conhecidas
-        if permitido and nome == "pc_comando":
-            permitido = avaliar(argumentos.get("comando")).permitido
-        if permitido and nome == "pc_comando":
-            pendente.clear()
-            pendente.update(comando=argumentos.get("comando"), motivo=argumentos.get("motivo"))
-        if not permitido:
-            pendente.clear()
-        registro.evento("chamada", ferramenta=nome, argumentos=argumentos, permitido=permitido)
-        return permitido
-
-    def pedir(texto):
-        texto_mostrado = montar_texto_confirmacao(pendente, texto)
-        try:
-            resposta = bool(confirmar(texto_mostrado))
-        except Exception:
-            resposta = False
-        finally:
-            pendente.clear()
-        registro.evento("confirmacao", pedido=texto_mostrado, resposta=resposta)
-        return resposta
-
+        raise ValueError("confirmar é obrigatório: sem ele a Atlas não executa nada")
+    memoria = memoria if memoria is not None else Memoria()
+    ferramentas = (
+        criar_ferramentas_leitura(executor) + [ComandoPcTool(executor)] + criar_ferramentas_memoria(memoria) + list(extras)
+    )
+    sem_nivel = [f.spec.name for f in ferramentas if f.spec.name not in NIVEIS]
+    if sem_nivel:
+        raise ValueError(f"ferramenta sem nível de permissão: {', '.join(sem_nivel)}")
     if engine is None:
         from openjarvis.engine.ollama import OllamaEngine
 
         engine = OllamaEngine(host=host)
-    return OrchestratorAgent(
-        engine,
-        modelo,
-        tools=ferramentas,
-        system_prompt=SYSTEM_PROMPT,
-        interactive=True,
-        confirm_callback=pedir,
-        before_tool_call=antes,
-        parallel_tools=False,
-        max_turns=max_turns,
-        temperature=0.2,
+    return Agente(
+        engine=engine, modelo=modelo, ferramentas=ferramentas, confirmar=confirmar, registro=registro,
+        permissoes=permissoes if permissoes is not None else Permissoes(),
+        memoria=memoria, sessao=sessao if sessao is not None else Sessao(), max_passos=max_passos,
     )
 
 
-def perguntar(agente, registro, texto):
-    """Roda uma pergunta, registra tudo e devolve o texto da resposta."""
-    registro.evento("pergunta", texto=texto)
-    try:
-        resultado = agente.run(texto)
-    except Exception as erro:
-        registro.evento("erro", classe=type(erro).__name__, mensagem=str(erro))
-        raise
-    registro.evento("resposta", texto=resultado.content)
-    return resultado.content
+def perguntar(agente, registro, texto, origem="janela"):
+    """Compatibilidade com janela e cenários. O registro usado é o do agente."""
+    return agente.perguntar(texto, origem)

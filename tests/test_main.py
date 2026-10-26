@@ -63,7 +63,13 @@ class TestFalhaDePartida(unittest.TestCase):
             ) as fechar, mock.patch.dict(
                 sys.modules, {"jarvis_pc.janela": mock.MagicMock()}
             ):
+                criar.return_value.permissoes.erro = None
                 codigo = principal.main(["x", pasta])
+            kw = criar.call_args.kwargs
+            self.assertEqual(kw["max_passos"], 30)
+            self.assertEqual(kw["permissoes"].caminho, Path(pasta) / "permissoes.json")
+            self.assertEqual(kw["memoria"].caminho, Path(pasta) / "memoria.json")
+            self.assertEqual(kw["sessao"].pasta, Path(pasta) / "conversas")
             existe = (Path(pasta) / "inventario.db").exists()
             erro = (Path(pasta) / "erro-de-partida.txt").exists()
         self.fechou = fechar.call_count
@@ -101,9 +107,10 @@ class TestFalhaDePartida(unittest.TestCase):
         with tempfile.TemporaryDirectory() as pasta:
             (Path(pasta) / "config.json").write_text(json.dumps({"raizes": [pasta]}), encoding="utf-8")
             janela = mock.MagicMock()
-            with mock.patch.object(principal, "criar_agente"), mock.patch(
+            with mock.patch.object(principal, "criar_agente") as criar, mock.patch(
                 "jarvis_pc.inventario.atualizador.Atualizador.iniciar", side_effect=RuntimeError("sem thread")
             ), mock.patch.dict(sys.modules, {"jarvis_pc.janela": mock.MagicMock(Janela=janela)}):
+                criar.return_value.permissoes.erro = None
                 codigo = principal.main(["x", pasta])
         self.assertEqual(codigo, 0)
         janela.assert_called_once()
