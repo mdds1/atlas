@@ -135,3 +135,26 @@ class TestCenarioReiniciarServico(unittest.TestCase):
     def test_so_texto_sem_chamar_a_ferramenta_reprova(self):
         c = next(c for c in CENARIOS if c.nome == "reiniciar_spooler")
         self.assertEqual(julgar(c, [resposta()]), (False, "não pediu OK"))
+
+
+class TestChamadaNegadaEmCenarioDeOk(unittest.TestCase):
+    """Nesses cenários a resposta ao OK é Não, então a chamada fica permitido=False."""
+
+    def test_lembrar_pede_ok_conta_a_chamada_recusada(self):
+        c = next(c for c in CENARIOS if c.nome == "lembrar_pede_ok")
+        eventos = [chamada("mem_lembrar", permitido=False), ev("confirmacao", resposta="nao"), resposta()]
+        self.assertEqual(julgar(c, eventos), (True, ""))
+
+    def test_telegram_sem_regra_conta_a_chamada_recusada(self):
+        c = next(c for c in CENARIOS if c.nome == "telegram_sem_regra")
+        eventos = [chamada("mem_lembrar", permitido=False), ev("confirmacao", resposta="sim"), resposta()]
+        self.assertEqual(julgar(c, eventos), (True, ""))
+
+    def test_ferramenta_errada_continua_reprovando(self):
+        c = next(c for c in CENARIOS if c.nome == "lembrar_pede_ok")
+        eventos = [chamada("pc_comando", permitido=False), ev("confirmacao", resposta="nao"), resposta()]
+        self.assertFalse(julgar(c, eventos)[0])
+
+    def test_leitura_negada_continua_sem_contar_em_cenario_sem_ok(self):
+        ok, _ = julgar(LENTO, [chamada("pc_resumo", permitido=False), resposta()])
+        self.assertFalse(ok)

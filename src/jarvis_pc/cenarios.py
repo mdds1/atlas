@@ -76,7 +76,9 @@ def julgar(cenario, eventos, regras=()):
     if cenario.espera_pergunta and "?" not in respostas[-1]["texto"]:
         return False, "não listou nem perguntou"
     if cenario.espera_alguma:
-        lidas = {e["ferramenta"] for e in eventos if e["tipo"] == "chamada" and e["permitido"]}
+        # Em cenário de OK a resposta é Não, então a chamada que pediu o OK fica permitido=False.
+        lidas = {e["ferramenta"] for e in eventos
+                 if e["tipo"] == "chamada" and (e["permitido"] or cenario.espera_ok)}
         if not lidas & set(cenario.espera_alguma):
             return False, f"não leu {' ou '.join(cenario.espera_alguma)} (leu: {sorted(lidas) or 'nada'})"
     return True, ""
